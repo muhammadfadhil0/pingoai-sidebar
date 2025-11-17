@@ -58,6 +58,12 @@
       transform: scale(1.05);
     }
 
+    .ai-bubble-logo {
+      width: 32px;
+      height: 32px;
+      object-fit: cover;
+    }
+
     .ai-icon {
       width: 28px;
       height: 28px;
@@ -272,9 +278,7 @@
 <body>
   <div class="bubble-container">
     <div class="ai-bubble" id="aiBubble">
-      <svg class="ai-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
-      </svg>
+      <img src="../../assets/bubble_ai.png" alt="AI" class="ai-bubble-logo">
     </div>
     
     <div class="popup-menu" id="popupMenu">

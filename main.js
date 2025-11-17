@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, globalShortcut, screen, clipboard } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut, screen, clipboard, Tray, Menu } = require('electron');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -10,6 +10,7 @@ const isWindows = process.platform === 'win32';
 let chatWindow = null;
 let settingsWindow = null;
 let selectionBubbleWindow = null;
+let tray = null;
 let selectedText = '';
 let conversationHistory = [];
 
@@ -174,6 +175,12 @@ function broadcastLanguageSettings(languageSettings = DEFAULT_LANGUAGE_SETTINGS)
   }
 }
 
+function broadcastServiceSettings(serviceSettings = { runInBackground: true, autoStart: false }) {
+  if (chatWindow) {
+    chatWindow.webContents.send('service-settings-updated', serviceSettings);
+  }
+}
+
 // Create chat overlay window (normal window by default, not always on top)
 function createChatWindow(alwaysOnTop = false) {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
@@ -235,6 +242,22 @@ function createChatWindow(alwaysOnTop = false) {
   });
 
   chatWindow.loadFile('src/renderer/chat.html');
+  
+  chatWindow.on('close', (event) => {
+    if (app.isQuitting) {
+      return;
+    }
+
+    const serviceSettings = store.get('serviceSettings', { runInBackground: true });
+    if (serviceSettings.runInBackground) {
+      event.preventDefault();
+      chatWindow.hide();
+      return;
+    }
+
+    // Allow the app to quit when background mode is disabled
+    app.isQuitting = true;
+  });
   
   chatWindow.on('closed', () => {
     chatWindow = null;
@@ -366,7 +389,61 @@ function stopClipboardWatcher() {
   clipboardWatcherInterval = null;
 }
 
+function createTray() {
+  try {
+    // Use logo.png from assets folder
+    const iconPath = path.join(__dirname, 'assets', 'tray_icon.png');
+    
+    // Check if icon exists
+    if (!fs.existsSync(iconPath)) {
+      console.warn('Tray icon not found at:', iconPath);
+      return;
+    }
+    
+    tray = new Tray(iconPath);
+    
+    const contextMenu = Menu.buildFromTemplate([
+      {
+        label: 'Open',
+        click: () => {
+          if (chatWindow) {
+            chatWindow.show();
+            chatWindow.focus();
+          } else {
+            createChatWindow();
+          }
+        }
+      },
+      {
+        label: 'Quit',
+        click: () => {
+          app.isQuitting = true;
+          app.quit();
+        }
+      }
+    ]);
+    
+    tray.setToolTip('PingoAI');
+    tray.setContextMenu(contextMenu);
+    
+    // Double click to open window
+    tray.on('double-click', () => {
+      if (chatWindow) {
+        chatWindow.show();
+        chatWindow.focus();
+      } else {
+        createChatWindow();
+      }
+    });
+  } catch (error) {
+    console.error('Failed to create tray:', error);
+  }
+}
+
 app.whenReady().then(() => {
+  // Create system tray
+  createTray();
+  
   // Create chat window on startup
   createChatWindow();
 
@@ -378,14 +455,22 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
+  const serviceSettings = store.get('serviceSettings', { runInBackground: true });
+  if (serviceSettings.runInBackground) {
+    // Keep running in tray
+    return;
   }
+
+  app.isQuitting = true;
+  app.quit();
 });
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
   stopClipboardWatcher();
+  if (tray) {
+    tray.destroy();
+  }
 });
 
 // IPC Handlers
@@ -399,7 +484,8 @@ ipcMain.handle('get-settings', async () => {
     languageSettings: {
       ...DEFAULT_LANGUAGE_SETTINGS,
       ...(store.get('languageSettings') || {})
-    }
+    },
+    serviceSettings: store.get('serviceSettings', { runInBackground: true, autoStart: false })
   };
 });
 
@@ -421,6 +507,17 @@ ipcMain.handle('save-settings', async (event, settings) => {
       ...settings.languageSettings
     };
     store.set('languageSettings', normalizedLanguage);
+  }
+  if (settings.serviceSettings) {
+    store.set('serviceSettings', settings.serviceSettings);
+    
+    // Handle auto-start setting
+    if (typeof settings.serviceSettings.autoStart === 'boolean') {
+      app.setLoginItemSettings({
+        openAtLogin: settings.serviceSettings.autoStart,
+        openAsHidden: false
+      });
+    }
   }
   return { success: true };
 });
@@ -513,6 +610,20 @@ ipcMain.handle('apply-settings', async (event, settings) => {
       };
       store.set('languageSettings', normalizedLanguage);
       broadcastLanguageSettings(normalizedLanguage);
+    }
+
+    if (settings.serviceSettings) {
+      store.set('serviceSettings', settings.serviceSettings);
+      
+      // Handle auto-start setting
+      if (typeof settings.serviceSettings.autoStart === 'boolean') {
+        app.setLoginItemSettings({
+          openAtLogin: settings.serviceSettings.autoStart,
+          openAsHidden: false
+        });
+      }
+
+      broadcastServiceSettings(settings.serviceSettings);
     }
 
     return { success: true };
@@ -774,6 +885,24 @@ ipcMain.handle('hide-chat-window', async () => {
     chatWindow.hide();
   }
   return { success: true };
+});
+
+ipcMain.handle('close-chat-window', async () => {
+  const serviceSettings = store.get('serviceSettings', { runInBackground: true, autoStart: false });
+  if (serviceSettings.runInBackground) {
+    if (chatWindow) {
+      chatWindow.hide();
+    }
+    return { success: true, action: 'hide' };
+  }
+
+  app.isQuitting = true;
+  if (chatWindow) {
+    chatWindow.close();
+  } else {
+    app.quit();
+  }
+  return { success: true, action: 'quit' };
 });
 
 ipcMain.handle('minimize-chat-window', async () => {

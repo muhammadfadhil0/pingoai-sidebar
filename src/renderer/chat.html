@@ -69,6 +69,13 @@
       box-shadow: 0 1px 3px var(--shadow-color);
     }
 
+    .header .logo {
+      width: 5rem;
+      height: 1.5rem;
+      object-fit:fill;
+      flex-shrink: 0;
+    }
+
     .header h1 {
       color: var(--text-primary);
       font-size: 18px;
@@ -470,12 +477,7 @@
 </head>
 <body>
   <div class="header">
-    <h1>
-      <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
-      </svg>
-      <span data-i18n="appTitle">PingoAI</span>
-    </h1>
+    <img src="../../assets/logo.png" alt="PingoAI Logo" class="logo">
     <div class="header-buttons">
       <div class="menu-button">
         <button class="header-btn" id="menuBtn" data-i18n-title="menuTooltip" title="Menu">
@@ -532,8 +534,7 @@
 
   <div class="chat-container" id="chatContainer">
     <div class="welcome-message">
-      <h2 data-i18n="welcomeTitle">Welcome to PingoAI</h2>
-      <p data-i18n="welcomeSubtitle">Your AI assistant is ready to help!</p>
+      <h2 data-i18n="welcomeTitle">How can I assist you today?</h2>
       <div class="usage-guide">
         <strong data-i18n="usageTitle">📖 Cara Penggunaan:</strong>
         <ol class="usage-list">
@@ -601,6 +602,7 @@
     let isDarkMode = false;
     let currentPinState = false;
     let currentToggleShortcutLabel = 'Ctrl+Alt+A';
+    let runInBackgroundEnabled = true;
 
     const translations = {
       en: {
@@ -610,12 +612,11 @@
         minimizeTooltip: 'Minimize',
         menuSettingsLabel: 'Settings',
         menuClearChatLabel: 'Clear Chat',
-        welcomeTitle: 'Welcome to PingoAI',
-        welcomeSubtitle: 'Your AI assistant is ready to help!',
+        welcomeTitle: 'How can I assist you today?',
         usageTitle: '📖 How to Use',
         usageStepCopy: 'Copy the text you want to process',
         usageStepBubblePrefix: 'Press',
-        usageStepBubbleSuffix: 'to show the PingoAI popup',
+        usageStepBubbleSuffix: 'to show the PingoAI popup if it does not appear automatically',
         usageStepChooseTool: 'Choose the tool you want to use',
         usageStepTogglePrefix: 'Use',
         usageStepToggleSuffix: 'to open or close the chat window',
@@ -632,7 +633,8 @@
         processErrorPrefix: '❌ Failed to process:',
         genericErrorPrefix: '❌ Error:',
         hideButtonTitle: 'Hide ({{shortcut}})',
-        selectedTextLabel: '📝 Selected text:\n{{preview}}',
+        quitButtonTitle: 'Quit ({{shortcut}})',
+        selectedTextLabel: 'Selected text:\n{{preview}}',
         translateSelectedTextLabel: '🌐 Translate to {{target}}:\n{{preview}}',
         customActionSelectedTextLabel: '✨ {{action}}:\n{{preview}}',
         unknownError: 'Unknown error'
@@ -644,12 +646,11 @@
         minimizeTooltip: 'Minimalkan',
         menuSettingsLabel: 'Pengaturan',
         menuClearChatLabel: 'Hapus Riwayat',
-        welcomeTitle: 'Selamat datang di PingoAI',
-        welcomeSubtitle: 'Asisten AI siap membantu Anda!',
+        welcomeTitle: 'Apa yang bisa saya bantu hari ini?',
         usageTitle: '📖 Cara Penggunaan',
         usageStepCopy: 'Salin teks yang ingin diproses',
         usageStepBubblePrefix: 'Tekan',
-        usageStepBubbleSuffix: 'untuk menampilkan popup PingoAI',
+        usageStepBubbleSuffix: 'untuk menampilkan popup PingoAI jika tidak muncul otomatis',
         usageStepChooseTool: 'Pilih alat yang ingin kamu gunakan',
         usageStepTogglePrefix: 'Gunakan',
         usageStepToggleSuffix: 'untuk membuka atau menutup jendela chat',
@@ -666,7 +667,8 @@
         processErrorPrefix: '❌ Gagal memproses:',
         genericErrorPrefix: '❌ Terjadi kesalahan:',
         hideButtonTitle: 'Sembunyikan ({{shortcut}})',
-        selectedTextLabel: '📝 Teks yang dipilih:\n{{preview}}',
+        quitButtonTitle: 'Keluar ({{shortcut}})',
+        selectedTextLabel: 'Teks yang dipilih:\n{{preview}}',
         translateSelectedTextLabel: '🌐 Terjemahkan ke {{target}}:\n{{preview}}',
         customActionSelectedTextLabel: '✨ {{action}}:\n{{preview}}',
         unknownError: 'Kesalahan tidak diketahui'
@@ -743,7 +745,8 @@
       if (!closeBtn) {
         return;
       }
-      closeBtn.title = getTranslation('hideButtonTitle', { shortcut: currentToggleShortcutLabel });
+      const key = runInBackgroundEnabled ? 'hideButtonTitle' : 'quitButtonTitle';
+      closeBtn.title = getTranslation(key, { shortcut: currentToggleShortcutLabel });
     }
 
     applyTranslationsToDom();
@@ -809,7 +812,7 @@
     });
 
     sendBtn.addEventListener('click', sendMessage);
-    closeBtn.addEventListener('click', () => window.electronAPI.hideWindow());
+    closeBtn.addEventListener('click', () => window.electronAPI.closeWindow());
     minimizeBtn.addEventListener('click', () => window.electronAPI.minimizeWindow());
     
     settingsMenuItem.addEventListener('click', async () => {
@@ -919,6 +922,15 @@
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
+    function addMessageWithHTML(html, type) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${type}`;
+      messageDiv.innerHTML = html.replace(/\n/g, '<br>');
+      
+      chatContainer.insertBefore(messageDiv, typingIndicator);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
     // Check settings on load
     window.electronAPI.getSettings().then(settings => {
       if (settings.languageSettings) {
@@ -930,6 +942,10 @@
       if (settings.windowSettings) {
         applyWindowSettingsToUI(settings.windowSettings);
       }
+      if (settings.serviceSettings) {
+        runInBackgroundEnabled = settings.serviceSettings.runInBackground !== false;
+        updateCloseButtonTitle();
+      }
     });
 
     window.electronAPI.onWindowSettingsUpdated((windowSettings) => {
@@ -938,6 +954,11 @@
 
     window.electronAPI.onLanguageSettingsUpdated((languageSettings) => {
       applyLanguageSettings(languageSettings || {});
+    });
+
+    window.electronAPI.onServiceSettingsUpdated((serviceSettings = {}) => {
+      runInBackgroundEnabled = serviceSettings.runInBackground !== false;
+      updateCloseButtonTitle();
     });
 
     function applyWindowSettingsToUI(windowSettings = {}) {
@@ -975,14 +996,16 @@
       const { text, action, param } = data;
       const preview = `${text.substring(0, 200)}${text.length > 200 ? '...' : ''}`;
       
-      let userMessage = getTranslation('selectedTextLabel', { preview });
+      let userMessage = '';
       if (action === 'translate' && param) {
-        userMessage = getTranslation('translateSelectedTextLabel', { target: param, preview });
+        userMessage = `<strong>${getTranslation('translateSelectedTextLabel', { target: param, preview: '' }).split(':')[0]}:</strong>\n${preview}`;
       } else if (action === 'custom' && param) {
-        userMessage = getTranslation('customActionSelectedTextLabel', { action: param, preview });
+        userMessage = `<strong>${param}:</strong>\n${preview}`;
+      } else {
+        userMessage = `<strong>${getTranslation('selectedTextLabel', { preview: '' }).split(':')[0]}:</strong>\n${preview}`;
       }
       
-      addMessage(userMessage, 'user');
+      addMessageWithHTML(userMessage, 'user');
       
       // Disable input
       sendBtn.disabled = true;

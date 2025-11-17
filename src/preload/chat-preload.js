@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   debugHighlightWatcher: () => ipcRenderer.invoke('debug-highlight-watcher'),
   getSettings: () => ipcRenderer.invoke('get-settings'),
   hideWindow: () => ipcRenderer.invoke('hide-chat-window'),
+  closeWindow: () => ipcRenderer.invoke('close-chat-window'),
   minimizeWindow: () => ipcRenderer.invoke('minimize-chat-window'),
   togglePin: () => ipcRenderer.invoke('toggle-pin-window'),
   isPinned: () => ipcRenderer.invoke('is-window-pinned'),
@@ -16,5 +17,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onProcessSelectedText: (callback) => ipcRenderer.on('process-selected-text', (event, data) => callback(data)),
   onApplyDarkMode: (callback) => ipcRenderer.on('apply-dark-mode', (event, isDark) => callback(isDark)),
   onWindowSettingsUpdated: (callback) => ipcRenderer.on('window-settings-updated', (event, data) => callback(data)),
-  onLanguageSettingsUpdated: (callback) => ipcRenderer.on('language-settings-updated', (event, data) => callback(data))
+  onLanguageSettingsUpdated: (callback) => ipcRenderer.on('language-settings-updated', (event, data) => callback(data)),
+  onServiceSettingsUpdated: (callback) => ipcRenderer.on('service-settings-updated', (event, data) => callback(data))
 });

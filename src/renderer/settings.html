@@ -530,6 +530,29 @@
         </div>
       </div>
 
+      <!-- SERVICE SECTION -->
+      <h2 class="section-header" data-i18n="serviceSectionTitle">Service</h2>
+
+      <div class="form-group">
+        <label class="toggle-row" for="runInBackgroundToggle">
+          <input type="checkbox" id="runInBackgroundToggle" />
+          <div>
+            <strong data-i18n="runInBackgroundLabel">Run PingoAI in background when closing the app</strong>
+            <span data-i18n="runInBackgroundHint">The app will stay in system tray instead of fully quitting</span>
+          </div>
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label class="toggle-row" for="autoStartToggle">
+          <input type="checkbox" id="autoStartToggle" />
+          <div>
+            <strong data-i18n="autoStartLabel">Launch PingoAI automatically on system startup</strong>
+            <span data-i18n="autoStartHint">PingoAI will start automatically when your computer boots up</span>
+          </div>
+        </label>
+      </div>
+
       <!-- WINDOW SETTINGS SECTION -->
       <h2 class="section-header" data-i18n="windowSectionTitle">Window Settings</h2>
 
@@ -634,6 +657,8 @@
     const changeSettingsShortcutBtn = document.getElementById('changeSettingsShortcutBtn');
     const bubbleShortcutDisplay = document.getElementById('bubbleShortcutDisplay');
     const changeBubbleShortcutBtn = document.getElementById('changeBubbleShortcutBtn');
+    const runInBackgroundToggle = document.getElementById('runInBackgroundToggle');
+    const autoStartToggle = document.getElementById('autoStartToggle');
     const themeModeButtons = document.querySelectorAll('.theme-mode-group .theme-mode-btn');
     const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
     const transparencySliderContainer = document.getElementById('transparencySliderContainer');
@@ -675,6 +700,11 @@
         modelLabel: 'Model',
         modelPlaceholder: 'openai/gpt-oss-20b',
         modelHint: 'Example (Groq): openai/gpt-oss-20b · See https://console.groq.com/docs for the latest list.',
+        serviceSectionTitle: 'Service',
+        runInBackgroundLabel: 'Run PingoAI in background when closing the app',
+        runInBackgroundHint: 'The app will stay in system tray instead of fully quitting',
+        autoStartLabel: 'Launch PingoAI automatically on system startup',
+        autoStartHint: 'PingoAI will start automatically when your computer boots up',
         windowSectionTitle: 'Window Settings',
         alwaysOnTopLabel: 'Always on Top',
         alwaysOnTopHint: 'Keep the panel above other windows',
@@ -738,6 +768,11 @@
         modelLabel: 'Model',
         modelPlaceholder: 'openai/gpt-oss-20b',
         modelHint: 'Contoh (Groq): openai/gpt-oss-20b · Lihat https://console.groq.com/docs untuk daftar terbaru.',
+        serviceSectionTitle: 'Layanan',
+        runInBackgroundLabel: 'Biarkan PingoAI berjalan di latar belakang saat keluar dari aplikasi',
+        runInBackgroundHint: 'Aplikasi akan tetap di system tray tanpa benar-benar keluar',
+        autoStartLabel: 'Jalankan PingoAI otomatis saat komputer menyala',
+        autoStartHint: 'PingoAI akan otomatis berjalan saat komputer Anda dinyalakan',
         windowSectionTitle: 'Pengaturan Jendela',
         alwaysOnTopLabel: 'Selalu di Atas',
         alwaysOnTopHint: 'Panel selalu berada di atas jendela lain',
@@ -805,6 +840,11 @@
 
     const textSelectionPreferences = {
       autoBubbleOnHighlight: false
+    };
+
+    const servicePreferences = {
+      runInBackground: true,
+      autoStart: false
     };
 
     if (highlightWatcherToggle && !isWindowsPlatform) {
@@ -883,6 +923,7 @@
       hydrateWindowPreferences(settings.windowSettings);
       hydrateSelectionPreferences(settings.selectionSettings);
       hydrateLanguagePreferences(settings.languageSettings);
+      hydrateServicePreferences(settings.serviceSettings);
 
       if (windowState.success && typeof windowState.highlightWatcherEnabled === 'boolean') {
         textSelectionPreferences.autoBubbleOnHighlight = windowState.highlightWatcherEnabled;
@@ -949,6 +990,14 @@
         textSelectionPreferences.autoBubbleOnHighlight = highlightWatcherToggle.checked;
       });
     }
+
+    runInBackgroundToggle.addEventListener('change', () => {
+      servicePreferences.runInBackground = runInBackgroundToggle.checked;
+    });
+
+    autoStartToggle.addEventListener('change', () => {
+      servicePreferences.autoStart = autoStartToggle.checked;
+    });
 
     changeShortcutBtn.addEventListener('click', () => {
       startShortcutCapture('toggle', shortcutDisplay, changeShortcutBtn);
@@ -1038,7 +1087,8 @@
         themeMode,
         windowSettings: { ...windowPreferences },
         selectionSettings: { ...textSelectionPreferences },
-        languageSettings: { ...languagePreferences }
+        languageSettings: { ...languagePreferences },
+        serviceSettings: { ...servicePreferences }
       };
 
       try {
@@ -1174,6 +1224,17 @@
       if (highlightWatcherToggle) {
         highlightWatcherToggle.checked = textSelectionPreferences.autoBubbleOnHighlight;
       }
+    }
+
+    function hydrateServicePreferences(preferences = {}) {
+      servicePreferences.runInBackground = preferences.runInBackground !== false;
+      servicePreferences.autoStart = !!(preferences && preferences.autoStart);
+      renderServicePreferences();
+    }
+
+    function renderServicePreferences() {
+      runInBackgroundToggle.checked = servicePreferences.runInBackground;
+      autoStartToggle.checked = servicePreferences.autoStart;
     }
 
     function clampDockSize(value) {
