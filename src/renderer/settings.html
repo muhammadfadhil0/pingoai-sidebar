@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>PingoAI Settings</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      /* Light mode colors */
+      --bg-primary: #ffffff;
+      --bg-secondary: #f3f4f6;
+      --text-primary: #1f2937;
+      --text-secondary: #6b7280;
+      --border-color: #e5e7eb;
+      --input-bg: #ffffff;
+      --input-border: #d1d5db;
+      --orange: #ff6b35;
+      --orange-hover: #ff5722;
+      --orange-light: #fff5eb;
+    }
+
+    body.dark-mode {
+      /* Dark mode colors */
+      --bg-primary: #1f2937;
+      --bg-secondary: #374151;
+      --text-primary: #f9fafb;
+      --text-secondary: #9ca3af;
+      --border-color: #4b5563;
+      --input-bg: #374151;
+      --input-border: #4b5563;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: var(--bg-primary);
+      padding: 30px;
+      height: 100vh;
+      overflow: auto;
+      transition: background-color 0.3s ease;
+    }
+
+    .settings-container {
+      background: var(--bg-primary);
+      border-radius: 16px;
+      max-width: 600px;
+      margin: 0 auto;
+      /* box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); */
+      transition: background-color 0.3s ease;
+    }
+
+    h1 {
+      color: var(--text-primary);
+      margin-bottom: 10px;
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      justify-content: flex-start;
+    }
+
+    h1 svg {
+      width: 28px;
+      height: 28px;
+      fill: var(--orange);
+    }
+
+    .theme-mode-buttons {
+      display: flex;
+      gap: 12px;
+    }
+
+    .theme-mode-btn {
+      flex: 1;
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .theme-mode-btn:hover:not(.active) {
+      background: var(--border-color);
+      color: var(--orange);
+      border-color: var(--orange);
+    }
+
+    .theme-mode-btn.active {
+      background: var(--orange-light);
+      border-color: var(--orange);
+      color: var(--orange-hover);
+      box-shadow: 0 6px 16px rgba(255, 107, 53, 0.2);
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .form-group {
+      margin-bottom: 25px;
+    }
+
+    .toggle-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-primary);
+      font-size: 14px;
+    }
+
+    .toggle-control input {
+      width: 18px;
+      height: 18px;
+    }
+
+    .toggle-control.disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid var(--input-border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.2s ease;
+      background: var(--input-bg);
+      color: var(--text-primary);
+    }
+
+    input[type="text"]:focus,
+    input[type="password"]:focus {
+      outline: none;
+      border-color: var(--orange);
+      box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+    }
+
+    select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid var(--input-border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      background: var(--input-bg);
+      color: var(--text-primary);
+      transition: all 0.2s ease;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: var(--orange);
+      box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+    }
+
+    .input-hint {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 30px;
+    }
+
+    button {
+      flex: 1;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: var(--orange);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--orange-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+    }
+
+    .btn-secondary {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-secondary:hover {
+      background: var(--border-color);
+    }
+
+    .success-message,
+    .error-message {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      display: none;
+      animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .success-message {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #6ee7b7;
+    }
+
+    .error-message {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+    }
+
+    .success-message.show,
+    .error-message.show {
+      display: block;
+    }
+
+    .preset-buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .preset-btn {
+      padding: 6px 12px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: var(--text-primary);
+    }
+
+    .preset-btn:hover {
+      background: var(--orange-light);
+      border-color: var(--orange);
+      color: var(--orange);
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border-color);
+      margin: 25px 0;
+    }
+
+    .info-box {
+      background: var(--orange-light);
+      border: 1px solid var(--orange);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-top: 20px;
+      font-size: 13px;
+      color: var(--text-primary);
+    }
+
+    .info-box strong {
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .info-box ul {
+      margin-left: 20px;
+      margin-top: 8px;
+    }
+
+    .info-box li {
+      margin-bottom: 4px;
+    }
+
+    .section-header {
+      color: var(--text-primary);
+      font-size: 18px;
+      font-weight: 600;
+      margin-top: 35px;
+      margin-bottom: 20px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--orange);
+    }
+
+    .mode-option,
+    .toggle-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 10px 0;
+    }
+
+    .mode-option input[type="radio"],
+    .toggle-row input[type="checkbox"] {
+      margin-top: 4px;
+      width: 18px;
+      height: 18px;
+    }
+
+    .mode-option strong,
+    .toggle-row strong {
+      display: block;
+      color: var(--text-primary);
+      font-size: 14px;
+    }
+
+    .mode-option span,
+    .toggle-row span {
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+
+    .window-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 12px;
+    }
+
+    .range-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .range-row span {
+      min-width: 70px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    input[type="range"] {
+      flex: 1;
+    }
+
+    .shortcut-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .shortcut-display {
+      flex: 1;
+      border: 1px dashed var(--border-color);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      background: var(--bg-primary);
+    }
+
+    .ghost-btn {
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .ghost-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .ghost-btn:hover:not(:disabled) {
+      border-color: var(--orange);
+      color: var(--orange);
+    }
+  </style>
+</head>
+<body>
+  <div class="settings-container">
+    <h1>
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+      </svg>
+      <span data-i18n="settingsTitle">Settings</span>
+    </h1>
+    <div class="subtitle" data-i18n="settingsSubtitle">Configure your AI assistant</div>
+
+    <div class="success-message" id="successMessage">
+      ✓ Settings saved successfully!
+    </div>
+    <div class="error-message" id="errorMessage">
+      ✗ Failed to save settings. Please try again.
+    </div>
+
+    <form id="settingsForm">
+      <!-- LANGUAGE SECTION -->
+      <h2 class="section-header" data-i18n="languageSectionTitle">Language</h2>
+
+      <div class="form-group">
+        <label data-i18n="interfaceLanguageLabel">Interface Language</label>
+        <div class="theme-mode-buttons">
+          <button type="button" class="theme-mode-btn interface-lang-btn" data-lang="en">English</button>
+          <button type="button" class="theme-mode-btn interface-lang-btn" data-lang="id">Bahasa Indonesia</button>
+        </div>
+        <div class="input-hint" data-i18n="interfaceLanguageHint">Choose your preferred interface language</div>
+      </div>
+
+      <div class="form-group">
+        <label data-i18n="aiLanguageLabel">AI Language</label>
+        <div class="theme-mode-buttons">
+          <button type="button" class="theme-mode-btn ai-lang-btn" data-lang="en">English</button>
+          <button type="button" class="theme-mode-btn ai-lang-btn" data-lang="id">Bahasa Indonesia</button>
+        </div>
+        <div class="input-hint" data-i18n="aiLanguageHint">Language for AI responses and interactions</div>
+      </div>
+
+      <!-- APPEARANCE SECTION -->
+      <h2 class="section-header" data-i18n="appearanceSectionTitle">Appearance</h2>
+
+      <div class="form-group theme-mode-group">
+        <label data-i18n="themeModeLabel">Theme Mode</label>
+        <div class="theme-mode-buttons">
+          <button type="button" class="theme-mode-btn" data-mode="light" data-i18n="themeLightButton">Light Mode</button>
+          <button type="button" class="theme-mode-btn" data-mode="dark" data-i18n="themeDarkButton">Dark Mode</button>
+          <button type="button" class="theme-mode-btn" data-mode="system" data-i18n="themeSystemButton">Ikuti Sistem</button>
+        </div>
+        <div class="input-hint" data-i18n="themeModeHint">Gunakan tema terang, gelap, atau ikuti preferensi sistem Anda.</div>
+      </div>
+
+      <div class="form-group">
+        <label class="toggle-row" for="transparentToggle">
+          <input type="checkbox" id="transparentToggle" />
+          <div>
+            <strong data-i18n="transparentPanelLabel">Transparankan Panel</strong>
+            <span data-i18n="transparentPanelHint">Membuat panel menjadi semi-transparan</span>
+          </div>
+        </label>
+
+        <div id="transparencySliderContainer" style="display: none; margin-left: 30px; margin-top: 8px;">
+          <label style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;" data-i18n="transparencyLevelLabel">Tingkat Transparansi</label>
+          <div class="range-row">
+            <input type="range" id="transparencySlider" min="0.3" max="1.0" step="0.05" value="0.95" />
+            <span id="transparencyValue">95%</span>
+          </div>
+          <div class="input-hint" style="margin-top: 4px;" data-i18n="transparencySliderHint">Semakin rendah, semakin transparan (30% - 100%)</div>
+        </div>
+      </div>
+
+      <!-- INTEGRATION SECTION -->
+      <h2 class="section-header" data-i18n="integrationSectionTitle">Integration</h2>
+
+      <div class="form-group">
+        <label for="apiUrl" data-i18n="apiUrlLabel">API URL</label>
+        <input 
+          type="text" 
+          id="apiUrl" 
+          placeholder="https://api.openai.com/v1/chat/completions"
+          data-i18n-placeholder="apiUrlPlaceholder"
+          required
+        />
+        <div class="preset-buttons">
+          <button type="button" class="preset-btn" data-url="https://api.openai.com/v1/chat/completions">OpenAI</button>
+          <button type="button" class="preset-btn" data-url="https://api.anthropic.com/v1/messages">Anthropic</button>
+          <button type="button" class="preset-btn" data-url="http://localhost:11434/api/chat">Ollama</button>
+        </div>
+        <div class="input-hint" data-i18n="apiUrlHint">
+          The endpoint URL for your AI service (Groq base: https://api.groq.com/openai/v1)
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="apiKey" data-i18n="apiKeyLabel">API Key</label>
+        <input 
+          type="password" 
+          id="apiKey" 
+          placeholder="sk-..."
+          data-i18n-placeholder="apiKeyPlaceholder"
+          required
+        />
+        <div class="input-hint" data-i18n="apiKeyHint">
+          Your API key will be stored securely on your computer
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="modelName" data-i18n="modelLabel">Model</label>
+        <input 
+          type="text" 
+          id="modelName" 
+          placeholder="openai/gpt-oss-20b"
+          data-i18n-placeholder="modelPlaceholder"
+          required
+        />
+        <div class="input-hint" data-i18n="modelHint">
+          Example (Groq): openai/gpt-oss-20b · See https://console.groq.com/docs for the latest list
+        </div>
+      </div>
+
+      <!-- WINDOW SETTINGS SECTION -->
+      <h2 class="section-header" data-i18n="windowSectionTitle">Window Settings</h2>
+
+      <div class="form-group">
+        <label class="toggle-row" for="alwaysOnTopToggle">
+          <input type="checkbox" id="alwaysOnTopToggle" />
+          <div>
+            <strong data-i18n="alwaysOnTopLabel">Always on Top</strong>
+            <span data-i18n="alwaysOnTopHint">Panel selalu tampil di atas window lain</span>
+          </div>
+        </label>
+      </div>
+
+      <div class="window-grid">
+        <div class="form-group">
+          <label for="panelPosition" data-i18n="panelPositionLabel">Panel Position</label>
+          <select id="panelPosition">
+            <option value="right" data-i18n="panelPositionRight">Right</option>
+            <option value="left" data-i18n="panelPositionLeft">Left</option>
+            <option value="top" data-i18n="panelPositionTop">Top</option>
+            <option value="bottom" data-i18n="panelPositionBottom">Bottom</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="panelWidth" data-i18n="panelSizeLabel">Panel Size (300-600px)</label>
+          <div class="range-row">
+            <input type="range" id="panelWidth" min="300" max="600" step="10" value="400" />
+            <span id="panelWidthValue">400px</span>
+          </div>
+          <div class="input-hint" data-i18n="panelSizeHint">Top/bottom positions use this value as height.</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label data-i18n="shortcutsLabel">Keyboard Shortcuts</label>
+        <div class="input-hint" style="margin-bottom: 12px;" data-i18n="shortcutsHint">Customize keyboard shortcuts for quick access</div>
+        
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div>
+            <label style="font-size: 13px; margin-bottom: 4px;" data-i18n="toggleChatLabel">💡 Toggle Chat Window</label>
+            <div class="shortcut-row">
+              <div class="shortcut-display" id="shortcutDisplay">Ctrl+Alt+A</div>
+              <button type="button" class="ghost-btn" id="changeShortcutBtn" data-i18n="changeShortcutButton">Change</button>
+            </div>
+            <div class="input-hint" data-i18n="toggleChatHint">Show/hide the main chat panel</div>
+          </div>
+
+          <div>
+            <label style="font-size: 13px; margin-bottom: 4px;" data-i18n="openSettingsLabel">⚙️ Open Settings</label>
+            <div class="shortcut-row">
+              <div class="shortcut-display" id="settingsShortcutDisplay">Ctrl+Shift+S</div>
+              <button type="button" class="ghost-btn" id="changeSettingsShortcutBtn" data-i18n="changeShortcutButton">Change</button>
+            </div>
+            <div class="input-hint" data-i18n="openSettingsHint">Open settings window anytime</div>
+          </div>
+
+          <div>
+            <label style="font-size: 13px; margin-bottom: 4px;" data-i18n="showBubbleLabel">🔍 Show AI Bubble</label>
+            <div class="shortcut-row">
+              <div class="shortcut-display" id="bubbleShortcutDisplay">Ctrl+Shift+X</div>
+              <button type="button" class="ghost-btn" id="changeBubbleShortcutBtn" data-i18n="changeShortcutButton">Change</button>
+            </div>
+            <div class="input-hint" data-i18n="showBubbleHint">Show AI bubble for selected text</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group" style="display: none;">
+        <label data-i18n="textSelectionLabel">Text Selection Bubble</label>
+        <div class="toggle-control">
+          <input type="checkbox" id="highlightWatcherToggle" />
+          <span data-i18n="textSelectionToggleHint">Munculkan bubble otomatis saat teks di-highlight (tanpa copy)</span>
+        </div>
+        <div class="input-hint" data-i18n="textSelectionHint">Hanya tersedia di Windows dan membutuhkan modul HighlightWatcher (jalankan "npm run watcher:build").</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="button-group">
+        <button type="button" class="btn-secondary" id="testBtn" data-i18n="testConnectionButton">Test Connection</button>
+        <button type="submit" class="btn-primary" data-i18n="saveSettingsButton">Apply Settings</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const settingsForm = document.getElementById('settingsForm');
+    const apiUrlInput = document.getElementById('apiUrl');
+    const apiKeyInput = document.getElementById('apiKey');
+    const modelInput = document.getElementById('modelName');
+    const successMessage = document.getElementById('successMessage');
+    const errorMessage = document.getElementById('errorMessage');
+    const testBtn = document.getElementById('testBtn');
+    const transparentToggle = document.getElementById('transparentToggle');
+    const alwaysOnTopToggle = document.getElementById('alwaysOnTopToggle');
+    const panelPositionSelect = document.getElementById('panelPosition');
+    const panelWidthSlider = document.getElementById('panelWidth');
+    const panelWidthValue = document.getElementById('panelWidthValue');
+    const shortcutDisplay = document.getElementById('shortcutDisplay');
+    const changeShortcutBtn = document.getElementById('changeShortcutBtn');
+    const settingsShortcutDisplay = document.getElementById('settingsShortcutDisplay');
+    const changeSettingsShortcutBtn = document.getElementById('changeSettingsShortcutBtn');
+    const bubbleShortcutDisplay = document.getElementById('bubbleShortcutDisplay');
+    const changeBubbleShortcutBtn = document.getElementById('changeBubbleShortcutBtn');
+    const themeModeButtons = document.querySelectorAll('.theme-mode-group .theme-mode-btn');
+    const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+    const transparencySliderContainer = document.getElementById('transparencySliderContainer');
+    const transparencySlider = document.getElementById('transparencySlider');
+    const transparencyValue = document.getElementById('transparencyValue');
+    const highlightWatcherToggle = document.getElementById('highlightWatcherToggle');
+    const isWindowsPlatform = navigator.userAgent?.toLowerCase().includes('windows');
+    const interfaceLangButtons = document.querySelectorAll('.interface-lang-btn');
+    const aiLangButtons = document.querySelectorAll('.ai-lang-btn');
+
+    const translations = {
+      en: {
+        settingsTitle: 'Settings',
+        settingsSubtitle: 'Configure your AI assistant',
+        saveSuccessMessage: '✓ Settings saved successfully!',
+        saveErrorMessage: '✗ Failed to save settings. Please try again.',
+        languageSectionTitle: 'Language',
+        interfaceLanguageLabel: 'Interface Language',
+        interfaceLanguageHint: 'Choose your preferred interface language',
+        aiLanguageLabel: 'AI Language',
+        aiLanguageHint: 'Language for AI responses and interactions',
+        appearanceSectionTitle: 'Appearance',
+        themeModeLabel: 'Theme Mode',
+        themeLightButton: 'Light Mode',
+        themeDarkButton: 'Dark Mode',
+        themeSystemButton: 'Follow System',
+        themeModeHint: 'Use light, dark, or follow your system preference.',
+        transparentPanelLabel: 'Make Panel Transparent',
+        transparentPanelHint: 'Makes the panel semi-transparent',
+        transparencyLevelLabel: 'Transparency Level',
+        transparencySliderHint: 'Lower values increase transparency (30% - 100%).',
+        integrationSectionTitle: 'Integration',
+        apiUrlLabel: 'API URL',
+        apiUrlPlaceholder: 'https://api.openai.com/v1/chat/completions',
+        apiUrlHint: 'Endpoint URL for your AI service (Groq base: https://api.groq.com/openai/v1)',
+        apiKeyLabel: 'API Key',
+        apiKeyPlaceholder: 'sk-...',
+        apiKeyHint: 'Your API key is stored securely on this device.',
+        modelLabel: 'Model',
+        modelPlaceholder: 'openai/gpt-oss-20b',
+        modelHint: 'Example (Groq): openai/gpt-oss-20b · See https://console.groq.com/docs for the latest list.',
+        windowSectionTitle: 'Window Settings',
+        alwaysOnTopLabel: 'Always on Top',
+        alwaysOnTopHint: 'Keep the panel above other windows',
+        panelPositionLabel: 'Panel Position',
+        panelPositionRight: 'Right',
+        panelPositionLeft: 'Left',
+        panelPositionTop: 'Top',
+        panelPositionBottom: 'Bottom',
+        panelSizeLabel: 'Panel Size (300-600px)',
+        panelSizeHint: 'Top/bottom docked panels use this as height.',
+        shortcutsLabel: 'Keyboard Shortcuts',
+        shortcutsHint: 'Customize keyboard shortcuts for quick access',
+        toggleChatLabel: '💡 Toggle Chat Window',
+        toggleChatHint: 'Show or hide the main chat panel',
+        changeShortcutButton: 'Change',
+        openSettingsLabel: '⚙️ Open Settings',
+        openSettingsHint: 'Open the settings window anytime',
+        showBubbleLabel: '🔍 Show AI Bubble',
+        showBubbleHint: 'Show the AI bubble for selected text',
+        textSelectionLabel: 'Text Selection Bubble',
+        textSelectionToggleHint: 'Show bubble automatically when highlighting text (without copying)',
+        textSelectionHint: 'Windows only and requires HighlightWatcher (run "npm run watcher:build").',
+        testConnectionButton: 'Test Connection',
+        saveSettingsButton: 'Apply Settings',
+        testButtonWorking: 'Testing...',
+        testSuccessMessage: '✓ Connection successful! AI is working.',
+        connectionFailedPrefix: '✗ Connection failed: ',
+        applyFailedPrefix: '✗ Failed to apply settings: ',
+        listeningLabel: 'Listening...',
+        pressNewShortcutLabel: 'Press new shortcut...',
+        includeLetterMessage: 'Include a letter/number key',
+        unknownErrorLabel: 'Unknown error'
+      },
+      id: {
+        settingsTitle: 'Pengaturan',
+        settingsSubtitle: 'Atur asisten AI Anda',
+        saveSuccessMessage: '✓ Pengaturan berhasil disimpan!',
+        saveErrorMessage: '✗ Gagal menyimpan pengaturan. Coba lagi.',
+        languageSectionTitle: 'Bahasa',
+        interfaceLanguageLabel: 'Bahasa Antarmuka',
+        interfaceLanguageHint: 'Pilih bahasa antarmuka yang Anda inginkan',
+        aiLanguageLabel: 'Bahasa AI',
+        aiLanguageHint: 'Bahasa yang digunakan AI saat merespons',
+        appearanceSectionTitle: 'Tampilan',
+        themeModeLabel: 'Mode Tema',
+        themeLightButton: 'Mode Terang',
+        themeDarkButton: 'Mode Gelap',
+        themeSystemButton: 'Ikuti Sistem',
+        themeModeHint: 'Gunakan tema terang, gelap, atau ikuti preferensi sistem Anda.',
+        transparentPanelLabel: 'Transparankan Panel',
+        transparentPanelHint: 'Membuat panel menjadi semi-transparan',
+        transparencyLevelLabel: 'Tingkat Transparansi',
+        transparencySliderHint: 'Semakin rendah nilainya, semakin transparan (30% - 100%).',
+        integrationSectionTitle: 'Integrasi',
+        apiUrlLabel: 'URL API',
+        apiUrlPlaceholder: 'https://api.openai.com/v1/chat/completions',
+        apiUrlHint: 'Endpoint untuk layanan AI Anda (Groq: https://api.groq.com/openai/v1)',
+        apiKeyLabel: 'API Key',
+        apiKeyPlaceholder: 'sk-...',
+        apiKeyHint: 'API key Anda disimpan secara aman di perangkat ini.',
+        modelLabel: 'Model',
+        modelPlaceholder: 'openai/gpt-oss-20b',
+        modelHint: 'Contoh (Groq): openai/gpt-oss-20b · Lihat https://console.groq.com/docs untuk daftar terbaru.',
+        windowSectionTitle: 'Pengaturan Jendela',
+        alwaysOnTopLabel: 'Selalu di Atas',
+        alwaysOnTopHint: 'Panel selalu berada di atas jendela lain',
+        panelPositionLabel: 'Posisi Panel',
+        panelPositionRight: 'Kanan',
+        panelPositionLeft: 'Kiri',
+        panelPositionTop: 'Atas',
+        panelPositionBottom: 'Bawah',
+        panelSizeLabel: 'Ukuran Panel (300-600px)',
+        panelSizeHint: 'Dock atas/bawah menggunakan nilai ini sebagai tinggi.',
+        shortcutsLabel: 'Pintasan Keyboard',
+        shortcutsHint: 'Sesuaikan pintasan keyboard untuk akses cepat',
+        toggleChatLabel: '💡 Tampilkan/Sembunyikan Chat',
+        toggleChatHint: 'Menampilkan atau menyembunyikan panel chat utama',
+        changeShortcutButton: 'Ubah',
+        openSettingsLabel: '⚙️ Buka Pengaturan',
+        openSettingsHint: 'Buka jendela pengaturan kapan saja',
+        showBubbleLabel: '🔍 Tampilkan Bubble AI',
+        showBubbleHint: 'Tampilkan bubble AI untuk teks yang dipilih',
+        textSelectionLabel: 'Bubble Seleksi Teks',
+        textSelectionToggleHint: 'Tampilkan bubble otomatis saat menyorot teks (tanpa copy)',
+        textSelectionHint: 'Hanya tersedia di Windows dan perlu HighlightWatcher (jalankan "npm run watcher:build").',
+        testConnectionButton: 'Tes Koneksi',
+        saveSettingsButton: 'Terapkan',
+        testButtonWorking: 'Sedang tes...',
+        testSuccessMessage: '✓ Koneksi berhasil! AI siap digunakan.',
+        connectionFailedPrefix: '✗ Koneksi gagal: ',
+        applyFailedPrefix: '✗ Gagal menerapkan pengaturan: ',
+        listeningLabel: 'Mendengarkan...',
+        pressNewShortcutLabel: 'Tekan pintasan baru...',
+        includeLetterMessage: 'Sertakan tombol huruf atau angka',
+        unknownErrorLabel: 'Kesalahan tidak diketahui'
+      }
+    };
+
+    const languageNameMap = {
+      en: {
+        en: 'English',
+        id: 'Bahasa Indonesia'
+      },
+      id: {
+        en: 'Bahasa Inggris',
+        id: 'Bahasa Indonesia'
+      }
+    };
+
+    const languagePreferences = {
+      interfaceLanguage: 'en',
+      aiLanguage: 'en'
+    };
+
+    const originalLanguagePreferences = { ...languagePreferences };
+    let isLanguagePreviewDirty = false;
+
+    const windowPreferences = {
+      dockPosition: 'right',
+      dockSize: 400,
+      transparent: false,
+      alwaysOnTop: false,
+      toggleShortcut: 'CommandOrControl+Alt+A',
+      settingsShortcut: 'CommandOrControl+Shift+S',
+      bubbleShortcut: 'CommandOrControl+Shift+X',
+      opacity: 0.95
+    };
+
+    const textSelectionPreferences = {
+      autoBubbleOnHighlight: false
+    };
+
+    if (highlightWatcherToggle && !isWindowsPlatform) {
+      highlightWatcherToggle.disabled = true;
+      const toggleWrapper = highlightWatcherToggle.closest('.toggle-control');
+      if (toggleWrapper) {
+        toggleWrapper.classList.add('disabled');
+      }
+    }
+
+    let capturingShortcut = false;
+    let shortcutListener = null;
+    let currentShortcutType = null; // 'toggle', 'settings', 'bubble'
+    let themeMode = localStorage.getItem('themeMode') || 'light';
+    let isPreviewingPanelSize = false;
+    let originalPanelSize = 400;
+    let originalPanelPosition = 'right';
+
+    setThemeMode(themeMode, false);
+
+    interfaceLangButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const selectedLang = btn.dataset.lang;
+        setInterfaceLanguage(selectedLang);
+      });
+    });
+
+    aiLangButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const selectedLang = btn.dataset.lang;
+        setAILanguage(selectedLang);
+      });
+    });
+
+    themeModeButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const selectedMode = btn.dataset.mode;
+        setThemeMode(selectedMode);
+      });
+    });
+
+    prefersDarkScheme.addEventListener('change', () => {
+      if (themeMode === 'system') {
+        syncBodyTheme();
+      }
+    });
+
+    // Load existing settings
+    window.electronAPI.getSettings().then(async settings => {
+      apiUrlInput.value = settings.apiUrl || 'https://api.openai.com/v1/chat/completions';
+      apiKeyInput.value = settings.apiKey || '';
+      modelInput.value = settings.model || 'gpt-3.5-turbo';
+      
+      // Load theme state
+      const storedThemeMode = settings.themeMode || localStorage.getItem('themeMode') || (settings.darkMode ? 'dark' : 'light');
+      setThemeMode(storedThemeMode);
+      
+      // Load window state from chat window
+      const windowState = await window.electronAPI.getWindowState();
+      if (windowState.success) {
+        // Sync dengan state dari chat window
+        settings.windowSettings = settings.windowSettings || {};
+        settings.windowSettings.transparent = windowState.transparent;
+        settings.windowSettings.alwaysOnTop = windowState.alwaysOnTop;
+        if (windowState.toggleShortcut) {
+          settings.windowSettings.toggleShortcut = windowState.toggleShortcut;
+        }
+        if (windowState.settingsShortcut) {
+          settings.windowSettings.settingsShortcut = windowState.settingsShortcut;
+        }
+        if (windowState.bubbleShortcut) {
+          settings.windowSettings.bubbleShortcut = windowState.bubbleShortcut;
+        }
+      }
+      
+      hydrateWindowPreferences(settings.windowSettings);
+      hydrateSelectionPreferences(settings.selectionSettings);
+      hydrateLanguagePreferences(settings.languageSettings);
+
+      if (windowState.success && typeof windowState.highlightWatcherEnabled === 'boolean') {
+        textSelectionPreferences.autoBubbleOnHighlight = windowState.highlightWatcherEnabled;
+        renderSelectionPreferences();
+      }
+    });
+
+    transparentToggle.addEventListener('change', () => {
+      windowPreferences.transparent = transparentToggle.checked;
+      transparencySliderContainer.style.display = transparentToggle.checked ? 'block' : 'none';
+      
+      // Preview transparency on settings window
+      if (transparentToggle.checked) {
+        window.electronAPI.setWindowOpacity(windowPreferences.opacity);
+      } else {
+        window.electronAPI.setWindowOpacity(1.0);
+      }
+    });
+
+    transparencySlider.addEventListener('input', () => {
+      const value = parseFloat(transparencySlider.value);
+      windowPreferences.opacity = value;
+      transparencyValue.textContent = Math.round(value * 100) + '%';
+      
+      // Live preview on settings window
+      if (transparentToggle.checked) {
+        window.electronAPI.setWindowOpacity(value);
+      }
+    });
+
+    alwaysOnTopToggle.addEventListener('change', () => {
+      windowPreferences.alwaysOnTop = alwaysOnTopToggle.checked;
+    });
+
+    panelPositionSelect.addEventListener('change', () => {
+      windowPreferences.dockPosition = panelPositionSelect.value;
+      
+      // Preview position change
+      if (!isPreviewingPanelSize) {
+        originalPanelPosition = windowPreferences.dockPosition;
+      }
+      window.electronAPI.previewPanelSize(windowPreferences.dockSize, windowPreferences.dockPosition);
+    });
+
+    panelWidthSlider.addEventListener('input', () => {
+      const value = clampDockSize(Number(panelWidthSlider.value));
+      windowPreferences.dockSize = value;
+      panelWidthSlider.value = value;
+      panelWidthValue.textContent = `${value}px`;
+      
+      // Start preview mode on first change
+      if (!isPreviewingPanelSize) {
+        isPreviewingPanelSize = true;
+        originalPanelSize = value;
+        originalPanelPosition = windowPreferences.dockPosition;
+      }
+      
+      // Live preview
+      window.electronAPI.previewPanelSize(value, windowPreferences.dockPosition);
+    });
+
+    if (highlightWatcherToggle) {
+      highlightWatcherToggle.addEventListener('change', () => {
+        textSelectionPreferences.autoBubbleOnHighlight = highlightWatcherToggle.checked;
+      });
+    }
+
+    changeShortcutBtn.addEventListener('click', () => {
+      startShortcutCapture('toggle', shortcutDisplay, changeShortcutBtn);
+    });
+
+    changeSettingsShortcutBtn.addEventListener('click', () => {
+      startShortcutCapture('settings', settingsShortcutDisplay, changeSettingsShortcutBtn);
+    });
+
+    changeBubbleShortcutBtn.addEventListener('click', () => {
+      startShortcutCapture('bubble', bubbleShortcutDisplay, changeBubbleShortcutBtn);
+    });
+
+    function startShortcutCapture(type, displayElement, buttonElement) {
+      if (capturingShortcut) {
+        return;
+      }
+      capturingShortcut = true;
+      currentShortcutType = type;
+      buttonElement.disabled = true;
+      buttonElement.textContent = getTranslation('listeningLabel');
+      displayElement.textContent = getTranslation('pressNewShortcutLabel');
+      
+      shortcutListener = (event) => {
+        event.preventDefault();
+        if (event.key === 'Escape') {
+          endShortcutCapture(false, displayElement, buttonElement);
+          return;
+        }
+        const accelerator = buildAcceleratorFromEvent(event);
+        if (!accelerator) {
+          displayElement.textContent = getTranslation('includeLetterMessage');
+          return;
+        }
+        
+        // Update the appropriate shortcut
+        if (type === 'toggle') {
+          windowPreferences.toggleShortcut = accelerator;
+        } else if (type === 'settings') {
+          windowPreferences.settingsShortcut = accelerator;
+        } else if (type === 'bubble') {
+          windowPreferences.bubbleShortcut = accelerator;
+        }
+        
+        displayElement.textContent = formatShortcutLabel(accelerator);
+        endShortcutCapture(true, displayElement, buttonElement);
+      };
+      window.addEventListener('keydown', shortcutListener, true);
+    }
+
+    window.addEventListener('blur', () => {
+      if (capturingShortcut) {
+        endShortcutCapture(false);
+      }
+    });
+
+    // Restore panel size when settings window closes without saving
+    window.addEventListener('beforeunload', async () => {
+      if (isPreviewingPanelSize) {
+        await window.electronAPI.restorePanelSize();
+      }
+      if (isLanguagePreviewDirty) {
+        restoreLanguagePreferences();
+      }
+    });
+
+    // Preset buttons
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        apiUrlInput.value = btn.dataset.url;
+      });
+    });
+
+    // Save settings
+    settingsForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      hideMessages();
+      
+      const isDark = document.body.classList.contains('dark-mode');
+      
+      const settings = {
+        apiUrl: apiUrlInput.value.trim(),
+        apiKey: apiKeyInput.value.trim(),
+        model: modelInput.value.trim(),
+        darkMode: isDark,
+        themeMode,
+        windowSettings: { ...windowPreferences },
+        selectionSettings: { ...textSelectionPreferences },
+        languageSettings: { ...languagePreferences }
+      };
+
+      try {
+        const result = await window.electronAPI.saveSettings(settings);
+        
+        if (result.success) {
+          const applyResult = await window.electronAPI.applySettings(settings);
+          if (applyResult.success) {
+            successMessage.textContent = getTranslation('saveSuccessMessage');
+            persistLanguageLocalStorage();
+            originalLanguagePreferences.interfaceLanguage = languagePreferences.interfaceLanguage;
+            originalLanguagePreferences.aiLanguage = languagePreferences.aiLanguage;
+            isLanguagePreviewDirty = false;
+            showMessage('success');
+            // Reset preview mode after successful save
+            isPreviewingPanelSize = false;
+            originalPanelSize = windowPreferences.dockSize;
+            originalPanelPosition = windowPreferences.dockPosition;
+          } else {
+            const reason = applyResult.error || getTranslation('unknownErrorLabel');
+            errorMessage.textContent = getTranslation('applyFailedPrefix') + reason;
+            showMessage('error');
+            const latest = await window.electronAPI.getSettings();
+            hydrateWindowPreferences(latest.windowSettings);
+          }
+        } else {
+          errorMessage.textContent = getTranslation('saveErrorMessage');
+          showMessage('error');
+        }
+      } catch (error) {
+        console.error('Save error:', error);
+        const reason = (error && error.message) || getTranslation('unknownErrorLabel');
+        errorMessage.textContent = `${getTranslation('saveErrorMessage')} (${reason})`;
+        showMessage('error');
+      }
+    });
+
+    // Test connection
+    testBtn.addEventListener('click', async () => {
+      hideMessages();
+      testBtn.disabled = true;
+      testBtn.textContent = getTranslation('testButtonWorking');
+
+      try {
+        const isDark = document.body.classList.contains('dark-mode');
+        
+        // Save settings first
+        await window.electronAPI.saveSettings({
+          apiUrl: apiUrlInput.value.trim(),
+          apiKey: apiKeyInput.value.trim(),
+          model: modelInput.value.trim(),
+          darkMode: isDark,
+          themeMode,
+          windowSettings: { ...windowPreferences },
+          selectionSettings: { ...textSelectionPreferences },
+          languageSettings: { ...languagePreferences }
+        });
+
+        // Test with a simple message
+        const response = await window.electronAPI.sendMessage('Hello, are you there?', 'chat');
+        
+        if (response.error) {
+          errorMessage.textContent = getTranslation('connectionFailedPrefix') + (response.error || getTranslation('unknownErrorLabel'));
+          showMessage('error');
+        } else {
+          successMessage.textContent = getTranslation('testSuccessMessage');
+          showMessage('success');
+        }
+      } catch (error) {
+        const reason = (error && error.message) || getTranslation('unknownErrorLabel');
+        errorMessage.textContent = getTranslation('connectionFailedPrefix') + reason;
+        showMessage('error');
+      } finally {
+        testBtn.disabled = false;
+        testBtn.textContent = getTranslation('testConnectionButton');
+      }
+    });
+
+    function showMessage(type) {
+      if (type === 'success') {
+        successMessage.classList.add('show');
+        setTimeout(() => {
+          successMessage.classList.remove('show');
+        }, 3000);
+      } else {
+        errorMessage.classList.add('show');
+        setTimeout(() => {
+          errorMessage.classList.remove('show');
+        }, 5000);
+      }
+    }
+
+    function hideMessages() {
+      successMessage.classList.remove('show');
+      errorMessage.classList.remove('show');
+      const dictionary = translations[languagePreferences.interfaceLanguage] || translations.en;
+      successMessage.textContent = dictionary.saveSuccessMessage || translations.en.saveSuccessMessage;
+      errorMessage.textContent = dictionary.saveErrorMessage || translations.en.saveErrorMessage;
+    }
+
+    function hydrateWindowPreferences(preferences = {}) {
+      windowPreferences.dockPosition = normalizeDockPosition(preferences.dockPosition);
+      windowPreferences.dockSize = clampDockSize(preferences.dockSize ?? 400);
+      windowPreferences.transparent = !!preferences.transparent;
+      windowPreferences.alwaysOnTop = !!preferences.alwaysOnTop;
+      windowPreferences.toggleShortcut = preferences.toggleShortcut || 'CommandOrControl+Alt+A';
+      windowPreferences.settingsShortcut = preferences.settingsShortcut || 'CommandOrControl+Shift+S';
+      windowPreferences.bubbleShortcut = preferences.bubbleShortcut || 'CommandOrControl+Shift+X';
+      windowPreferences.opacity = clampOpacity(preferences.opacity ?? 0.95);
+      renderWindowPreferences();
+    }
+
+    function renderWindowPreferences() {
+      transparentToggle.checked = windowPreferences.transparent;
+      alwaysOnTopToggle.checked = windowPreferences.alwaysOnTop;
+      panelPositionSelect.value = windowPreferences.dockPosition;
+      panelWidthSlider.value = windowPreferences.dockSize;
+      panelWidthValue.textContent = `${windowPreferences.dockSize}px`;
+      shortcutDisplay.textContent = formatShortcutLabel(windowPreferences.toggleShortcut);
+      settingsShortcutDisplay.textContent = formatShortcutLabel(windowPreferences.settingsShortcut);
+      bubbleShortcutDisplay.textContent = formatShortcutLabel(windowPreferences.bubbleShortcut);
+      transparencySlider.value = windowPreferences.opacity;
+      transparencyValue.textContent = Math.round(windowPreferences.opacity * 100) + '%';
+      transparencySliderContainer.style.display = windowPreferences.transparent ? 'block' : 'none';
+    }
+
+    function hydrateSelectionPreferences(preferences = {}) {
+      textSelectionPreferences.autoBubbleOnHighlight = !!(preferences && preferences.autoBubbleOnHighlight);
+      renderSelectionPreferences();
+    }
+
+    function renderSelectionPreferences() {
+      if (highlightWatcherToggle) {
+        highlightWatcherToggle.checked = textSelectionPreferences.autoBubbleOnHighlight;
+      }
+    }
+
+    function clampDockSize(value) {
+      const numericValue = Number(value);
+      if (Number.isNaN(numericValue)) {
+        return 400;
+      }
+      return Math.min(600, Math.max(300, numericValue));
+    }
+
+    function normalizeDockPosition(position) {
+      const allowed = ['left', 'right', 'top', 'bottom'];
+      return allowed.includes(position) ? position : 'right';
+    }
+
+    function clampOpacity(value) {
+      const numericValue = Number(value);
+      if (Number.isNaN(numericValue)) {
+        return 0.95;
+      }
+      return Math.min(1.0, Math.max(0.3, numericValue));
+    }
+
+    function endShortcutCapture(success, displayElement, buttonElement) {
+      capturingShortcut = false;
+      if (buttonElement) {
+        buttonElement.disabled = false;
+        buttonElement.textContent = getTranslation('changeShortcutButton');
+      }
+      if (!success && displayElement) {
+        // Restore original value
+        if (currentShortcutType === 'toggle') {
+          displayElement.textContent = formatShortcutLabel(windowPreferences.toggleShortcut);
+        } else if (currentShortcutType === 'settings') {
+          displayElement.textContent = formatShortcutLabel(windowPreferences.settingsShortcut);
+        } else if (currentShortcutType === 'bubble') {
+          displayElement.textContent = formatShortcutLabel(windowPreferences.bubbleShortcut);
+        }
+      }
+      if (shortcutListener) {
+        window.removeEventListener('keydown', shortcutListener, true);
+        shortcutListener = null;
+      }
+      currentShortcutType = null;
+    }
+
+    function buildAcceleratorFromEvent(event) {
+      const modifiers = [];
+      if (event.ctrlKey || event.metaKey) {
+        modifiers.push('CommandOrControl');
+      }
+      if (event.altKey) {
+        modifiers.push('Alt');
+      }
+      if (event.shiftKey) {
+        modifiers.push('Shift');
+      }
+      const key = normalizeKey(event.key);
+      if (!key) {
+        return null;
+      }
+      return [...new Set([...modifiers, key])].join('+');
+    }
+
+    function normalizeKey(key) {
+      if (!key) {
+        return null;
+      }
+      const upperKey = key.length === 1 ? key.toUpperCase() : key;
+      const specialMap = {
+        'ArrowUp': 'Up',
+        'ArrowDown': 'Down',
+        'ArrowLeft': 'Left',
+        'ArrowRight': 'Right',
+        ' ': 'Space',
+        'Escape': 'Escape',
+        'Enter': 'Enter',
+        'Backspace': 'Backspace',
+        'Delete': 'Delete',
+        'Tab': 'Tab'
+      };
+      if (specialMap[key]) {
+        return specialMap[key];
+      }
+      if (/^F\d{1,2}$/i.test(upperKey)) {
+        return upperKey.toUpperCase();
+      }
+      if (['Shift', 'Control', 'Alt', 'Meta'].includes(key)) {
+        return null;
+      }
+      if (upperKey.length === 1) {
+        return upperKey;
+      }
+      return upperKey.charAt(0).toUpperCase() + upperKey.slice(1);
+    }
+
+    function formatShortcutLabel(accelerator) {
+      if (!accelerator) {
+        return 'Ctrl+Alt+A';
+      }
+      const isMac = navigator.platform?.toLowerCase().includes('mac');
+      return accelerator
+        .replace(/CommandOrControl/g, isMac ? 'Cmd' : 'Ctrl')
+        .replace(/Control/g, 'Ctrl');
+    }
+
+    function setThemeMode(mode, persist = true) {
+      themeMode = mode;
+      if (persist) {
+        localStorage.setItem('themeMode', mode);
+      }
+      syncBodyTheme();
+      renderThemeButtons();
+    }
+
+    function syncBodyTheme() {
+      const shouldUseDark = themeMode === 'dark' || (themeMode === 'system' && prefersDarkScheme.matches);
+      document.body.classList.toggle('dark-mode', shouldUseDark);
+      return shouldUseDark;
+    }
+
+    function renderThemeButtons() {
+      themeModeButtons.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === themeMode);
+      });
+    }
+
+    function setInterfaceLanguage(lang, options = {}) {
+      if (!lang) {
+        return;
+      }
+      const { persist = false, markDirty = true } = options;
+      languagePreferences.interfaceLanguage = lang;
+      applyInterfaceLanguage(lang);
+      renderLanguageButtons();
+      if (persist) {
+        persistLanguageLocalStorage();
+      }
+      if (markDirty) {
+        syncLanguagePreviewState();
+      }
+    }
+
+    function setAILanguage(lang, options = {}) {
+      if (!lang) {
+        return;
+      }
+      const { persist = false, markDirty = true } = options;
+      languagePreferences.aiLanguage = lang;
+      renderLanguageButtons();
+      if (persist) {
+        persistLanguageLocalStorage();
+      }
+      if (markDirty) {
+        syncLanguagePreviewState();
+      }
+    }
+
+    function hydrateLanguagePreferences(preferences = {}) {
+      const storedInterface = preferences.interfaceLanguage || localStorage.getItem('interfaceLanguage') || 'en';
+      const storedAI = preferences.aiLanguage || localStorage.getItem('aiLanguage') || 'en';
+      setInterfaceLanguage(storedInterface, { persist: false, markDirty: false });
+      setAILanguage(storedAI, { persist: false, markDirty: false });
+      originalLanguagePreferences.interfaceLanguage = storedInterface;
+      originalLanguagePreferences.aiLanguage = storedAI;
+      isLanguagePreviewDirty = false;
+    }
+
+    function renderLanguageButtons() {
+      const currentInterfaceLang = languagePreferences.interfaceLanguage;
+      const currentAiLang = languagePreferences.aiLanguage;
+      const labelMap = languageNameMap[currentInterfaceLang] || languageNameMap.en;
+
+      interfaceLangButtons.forEach(btn => {
+        const targetLang = btn.dataset.lang;
+        btn.textContent = labelMap[targetLang] || targetLang.toUpperCase();
+        btn.classList.toggle('active', targetLang === currentInterfaceLang);
+      });
+
+      aiLangButtons.forEach(btn => {
+        const targetLang = btn.dataset.lang;
+        btn.textContent = labelMap[targetLang] || targetLang.toUpperCase();
+        btn.classList.toggle('active', targetLang === currentAiLang);
+      });
+    }
+
+    function applyInterfaceLanguage(lang) {
+      const dictionary = translations[lang] || translations.en;
+      document.documentElement.lang = lang || 'en';
+
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        const localized = dictionary[key] ?? translations.en[key];
+        if (typeof localized === 'string') {
+          el.textContent = localized;
+        }
+      });
+
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        const localized = dictionary[key] ?? translations.en[key];
+        if (typeof localized === 'string') {
+          el.setAttribute('placeholder', localized);
+        }
+      });
+
+      if (!successMessage.classList.contains('show')) {
+        successMessage.textContent = dictionary.saveSuccessMessage || translations.en.saveSuccessMessage;
+      }
+      if (!errorMessage.classList.contains('show')) {
+        errorMessage.textContent = dictionary.saveErrorMessage || translations.en.saveErrorMessage;
+      }
+    }
+
+    function persistLanguageLocalStorage() {
+      localStorage.setItem('interfaceLanguage', languagePreferences.interfaceLanguage);
+      localStorage.setItem('aiLanguage', languagePreferences.aiLanguage);
+    }
+
+    function syncLanguagePreviewState() {
+      isLanguagePreviewDirty =
+        languagePreferences.interfaceLanguage !== originalLanguagePreferences.interfaceLanguage ||
+        languagePreferences.aiLanguage !== originalLanguagePreferences.aiLanguage;
+    }
+
+    function restoreLanguagePreferences() {
+      setInterfaceLanguage(originalLanguagePreferences.interfaceLanguage, { persist: false, markDirty: false });
+      setAILanguage(originalLanguagePreferences.aiLanguage, { persist: false, markDirty: false });
+      isLanguagePreviewDirty = false;
+    }
+
+    function getTranslation(key) {
+      const lang = languagePreferences.interfaceLanguage;
+      return (translations[lang] && translations[lang][key]) ?? translations.en[key] ?? '';
+    }
+  </script>
+</body>
+</html>
