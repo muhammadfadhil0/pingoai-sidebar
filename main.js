@@ -1,0 +1,1863 @@
+const { app, BrowserWindow, ipcMain, globalShortcut, screen, clipboard, Tray, Menu } = require('electron');
+const { spawn } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+
+
+// ========================================
+// DEV MODE - FRESH START HANYA UNTUK INSTALLER
+// ========================================
+const isDev = process.argv.includes('--dev') || !app.isPackaged;
+const isInstallerMode = process.argv.includes('--installer');
+
+if (isInstallerMode) {
+  const tempDir = path.join(app.getPath('temp'), 'pingoai-dev-' + Date.now());
+  app.setPath('userData', tempDir);
+  console.log('🧪 Installer mode - Fresh userData:', tempDir);
+}
+
+// ========================================
+
+
+const Store = require('electron-store').default;
+const store = new Store();
+const isWindows = process.platform === 'win32';
+
+// Single Instance Lock
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  // Jika sudah ada instance lain yang berjalan, quit aplikasi ini
+  console.log('Another instance is already running. Exiting...');
+  app.quit();
+} else {
+  // Jika ada yang coba buka instance kedua, fokuskan window yang sudah ada
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    console.log('Second instance detected, focusing existing window...');
+    if (chatWindow) {
+      if (chatWindow.isMinimized()) chatWindow.restore();
+      chatWindow.show();
+      chatWindow.focus();
+    } else {
+      createChatWindow();
+    }
+  });
+}
+
+let chatWindow = null;
+let settingsWindow = null;
+let selectionBubbleWindow = null;
+let glanceResponseWindow = null;
+let onboardingWindow = null;
+let glanceModeHintWindow = null;
+
+let tray = null;
+let selectedText = '';
+let lastBubbleBounds = null;
+let conversationHistory = [];
+
+const BUBBLE_WINDOW_WIDTH = 250;
+const BUBBLE_WINDOW_HEIGHT = 360;
+const GLANCE_RESPONSE_WIDTH = 400;
+const GLANCE_RESPONSE_MAX_HEIGHT = 500;
+const MAX_HISTORY_LENGTH = 20;
+const DEFAULT_TOGGLE_SHORTCUT = 'CommandOrControl+Alt+A';
+const DEFAULT_SETTINGS_SHORTCUT = 'CommandOrControl+Shift+S';
+const DEFAULT_BUBBLE_SHORTCUT = 'CommandOrControl+Shift+X';
+
+// System prompts for different languages
+const SYSTEM_PROMPT_EN = `You are PingoAI. Answer only what the user requests concisely (maximum three sentences/100 words) and don't elaborate. Definitions should be just the core meaning, without lists of symptoms or additional facts unless requested. Always respond in English. For translation commands, reply only with the translated text.`;
+
+const SYSTEM_PROMPT_ID = `You are PingoAI. Jawab hanya hal yang diminta pengguna secara singkat (maksimal tiga kalimat/100 kata) dan jangan melebar. Definisi cukup berupa pengertian inti, tanpa daftar gejala atau fakta tambahan kecuali diminta. Selalu gunakan Bahasa Indonesia kecuali saat pengguna memilih aksi terjemahan. Untuk perintah terjemahan, balas hanya dengan teks hasil terjemahan.`;
+
+const DEFAULT_LANGUAGE_SETTINGS = {
+  interfaceLanguage: 'en',
+  aiLanguage: 'en'
+};
+const CLIPBOARD_POLL_INTERVAL = 400;
+const MIN_CLIPBOARD_TEXT_LENGTH = 3;
+const AUTO_BUBBLE_DEBOUNCE_MS = 900;
+
+let clipboardWatcherInterval = null;
+let lastClipboardText = '';
+let lastBubbleTimestamp = 0;
+const autoHideSuppressedTexts = new Set();
+let isProcessingAction = false;
+
+// Duplicate text tracking
+let lastProcessedText = '';
+let duplicateTextCounter = 0;
+
+// AI Service State
+let aiServiceEnabled = store.get('aiServiceEnabled', true);
+
+function suppressClipboardForAutoHide() {
+  try {
+    // Gunakan lastClipboardText jika ada untuk memastikan kita men-suppress teks yang BENAR-BENAR memicu bubble
+    // Fallback ke clipboard.readText() jika lastClipboardText kosong
+    const textToSuppress = (lastClipboardText && lastClipboardText.length >= MIN_CLIPBOARD_TEXT_LENGTH)
+      ? lastClipboardText
+      : clipboard.readText();
+
+    if (textToSuppress && textToSuppress.trim().length >= MIN_CLIPBOARD_TEXT_LENGTH) {
+      autoHideSuppressedTexts.add(textToSuppress);
+      console.log('Suppressed text for auto-hide:', textToSuppress.substring(0, 20));
+    }
+  } catch (error) {
+    console.error('Failed to capture clipboard for auto-hide suppression:', error);
+  }
+}
+
+// Server Configuration
+// PENTING: Ganti URL ini dengan URL hosting PHP Anda setelah upload
+const SERVER_URL = 'https://soulhbc.com/api_pingoai/api.php';
+
+// Removed local free-integration loading logic as it is now on the server
+
+
+function trimHistory() {
+  if (conversationHistory.length > MAX_HISTORY_LENGTH) {
+    conversationHistory = conversationHistory.slice(-MAX_HISTORY_LENGTH);
+  }
+}
+
+function calculateBubbleBounds(cursorPoint = null) {
+  const targetPoint = cursorPoint || screen.getCursorScreenPoint();
+  const currentDisplay = screen.getDisplayNearestPoint(targetPoint);
+  const { x: displayX, y: displayY, width: screenWidth, height: screenHeight } = currentDisplay.workArea;
+
+  const relativeX = targetPoint.x - displayX;
+  const relativeY = targetPoint.y - displayY;
+
+  // Center bubble horizontally relative to cursor
+  const posX = displayX + Math.min(
+    Math.max(0, relativeX - Math.floor(BUBBLE_WINDOW_WIDTH / 2)),
+    screenWidth - BUBBLE_WINDOW_WIDTH
+  );
+
+  // Position bubble above cursor with adaptive spacing
+  // Use 40% of bubble height as offset for consistent positioning
+  const verticalOffset = Math.floor(BUBBLE_WINDOW_HEIGHT * 0.4);
+  const posY = displayY + Math.min(
+    Math.max(0, relativeY - verticalOffset),
+    screenHeight - BUBBLE_WINDOW_HEIGHT
+  );
+
+  return { x: posX, y: posY };
+}
+
+function revealBubbleWithText(rawText, preferredPoint = null, preferredBounds = null, options = {}) {
+  if (!rawText) {
+    console.log('[HW] revealBubbleWithText: no text');
+    return false;
+  }
+
+  const text = rawText.trim();
+  console.log('[HW] revealBubbleWithText called with text length:', text.length);
+  console.log('[HW] Text preview:', text.substring(0, 100));
+
+  if (text.length < MIN_CLIPBOARD_TEXT_LENGTH) {
+    console.log('[HW] Text too short:', text.length);
+    return false;
+  }
+
+  selectedText = text; // INI PENTING - simpan full text
+  console.log('[HW] selectedText set to length:', selectedText.length);
+
+  const bounds = preferredBounds || calculateBubbleBounds(preferredPoint);
+  createSelectionBubble(bounds, options);
+  lastBubbleBounds = bounds;
+  lastBubbleTimestamp = Date.now();
+  return true;
+}
+
+function toggleChatWindowVisibility() {
+  if (getCurrentAIMode() !== 'panel') {
+    console.log('Chat window is disabled while Glance Mode is active.');
+    return;
+  }
+
+  if (chatWindow) {
+    if (chatWindow.isVisible()) {
+      chatWindow.hide();
+    } else {
+      chatWindow.show();
+      chatWindow.focus();
+    }
+  } else {
+    createChatWindow();
+  }
+}
+
+function showOrCreateSettingsWindow() {
+  if (settingsWindow) {
+    settingsWindow.show();
+    settingsWindow.focus();
+  } else {
+    createSettingsWindow();
+  }
+}
+
+async function handleBubbleShortcut() {
+  // Don't show bubble if onboarding is not completed
+  const onboardingCompleted = store.get('onboardingCompleted', false);
+  if (!onboardingCompleted) {
+    console.log('Bubble shortcut disabled: onboarding not completed');
+    return;
+  }
+
+  // Check if AI Service is enabled
+  if (!aiServiceEnabled) {
+    console.log('Bubble shortcut disabled: AI Service is OFF');
+    return;
+  }
+
+  try {
+    const text = clipboard.readText();
+    if (revealBubbleWithText(text)) {
+      lastClipboardText = text;
+    }
+  } catch (error) {
+    console.error('Error reading clipboard:', error);
+  }
+}
+
+function createShortcutRegistrar(defaultShortcut, handler, label) {
+  let currentShortcut = null;
+  return (requestedShortcut) => {
+    const desiredShortcut = (typeof requestedShortcut === 'string' && requestedShortcut.trim().length > 0)
+      ? requestedShortcut.trim()
+      : defaultShortcut;
+    const shortcutsToTry = desiredShortcut === defaultShortcut
+      ? [defaultShortcut]
+      : [desiredShortcut, defaultShortcut];
+    const previousShortcut = currentShortcut;
+
+    if (previousShortcut) {
+      globalShortcut.unregister(previousShortcut);
+      currentShortcut = null;
+    }
+
+    for (const shortcut of shortcutsToTry) {
+      if (globalShortcut.register(shortcut, handler)) {
+        currentShortcut = shortcut;
+        return shortcut;
+      }
+      console.warn(`Failed to register ${label} ${shortcut}`);
+    }
+
+    if (previousShortcut) {
+      if (globalShortcut.register(previousShortcut, handler)) {
+        currentShortcut = previousShortcut;
+      }
+    }
+    return null;
+  };
+}
+
+const registerToggleShortcut = createShortcutRegistrar(
+  DEFAULT_TOGGLE_SHORTCUT,
+  toggleChatWindowVisibility,
+  'toggle shortcut'
+);
+const registerSettingsShortcut = createShortcutRegistrar(
+  DEFAULT_SETTINGS_SHORTCUT,
+  showOrCreateSettingsWindow,
+  'settings shortcut'
+);
+const registerBubbleShortcut = createShortcutRegistrar(
+  DEFAULT_BUBBLE_SHORTCUT,
+  handleBubbleShortcut,
+  'bubble shortcut'
+);
+
+function getCurrentAIMode() {
+  const aiModeSettings = store.get('aiModeSettings', { mode: 'glance' });
+  return aiModeSettings.mode === 'panel' ? 'panel' : 'glance';
+}
+
+function updateTrayContextMenu(mode = getCurrentAIMode()) {
+  if (!tray) {
+    return;
+  }
+
+  const template = [];
+
+  if (mode === 'panel') {
+    template.push({
+      label: 'Open',
+      click: () => {
+        if (chatWindow) {
+          chatWindow.show();
+          chatWindow.focus();
+        } else {
+          createChatWindow();
+        }
+      }
+    });
+  } else {
+    // Glance mode specific items
+    template.push(
+      {
+        label: `AI Service: ${aiServiceEnabled ? 'ON' : 'OFF'}`,
+        click: () => {
+          aiServiceEnabled = !aiServiceEnabled;
+          store.set('aiServiceEnabled', aiServiceEnabled);
+          console.log(`AI Service toggled to: ${aiServiceEnabled ? 'ON' : 'OFF'}`);
+          updateTrayContextMenu();
+        }
+      },
+      { type: 'separator' }
+    );
+  }
+
+  template.push(
+    {
+      label: 'Settings',
+      click: () => {
+        showOrCreateSettingsWindow();
+      }
+    },
+    {
+      label: 'Quit',
+      click: () => {
+        app.isQuitting = true;
+        app.quit();
+      }
+    }
+  );
+
+  const contextMenu = Menu.buildFromTemplate(template);
+  tray.setContextMenu(contextMenu);
+}
+
+function syncChatWindowWithAIMode(mode = getCurrentAIMode()) {
+  updateTrayContextMenu(mode);
+
+  if (mode === 'panel') {
+    if (chatWindow) {
+      chatWindow.show();
+      chatWindow.focus();
+    } else {
+      createChatWindow();
+    }
+  } else {
+    if (chatWindow) {
+      chatWindow.hide();
+    }
+
+    // Show glance mode hint if user hasn't disabled it
+    const glanceHintSettings = store.get('glanceModeHintSettings', { showHint: true });
+    if (glanceHintSettings.showHint) {
+      createGlanceModeHintWindow();
+    }
+  }
+}
+
+function broadcastWindowSettings(windowSettings = {}) {
+  if (chatWindow) {
+    chatWindow.webContents.send('window-settings-updated', windowSettings);
+  }
+}
+
+function broadcastLanguageSettings(languageSettings = DEFAULT_LANGUAGE_SETTINGS) {
+  if (chatWindow) {
+    chatWindow.webContents.send('language-settings-updated', languageSettings);
+  }
+}
+
+function broadcastServiceSettings(serviceSettings = { runInBackground: true, autoStart: false }) {
+  if (chatWindow) {
+    chatWindow.webContents.send('service-settings-updated', serviceSettings);
+  }
+}
+
+// Create chat overlay window (normal window by default, not always on top)
+function createChatWindow(alwaysOnTop = false) {
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+
+  // Load window settings from store
+  const windowSettings = store.get('windowSettings', {});
+  const isTransparent = windowSettings.transparent || false;
+  const isAlwaysOnTop = alwaysOnTop || windowSettings.alwaysOnTop || false;
+  const dockPosition = windowSettings.dockPosition || 'right';
+  const dockSize = windowSettings.dockSize || 400;
+  const opacity = isTransparent ? (windowSettings.opacity || 0.95) : 1.0;
+
+  // Calculate position based on dock position
+  let x, y, windowWidth, windowHeight;
+  if (dockPosition === 'right') {
+    x = width - dockSize;
+    y = 0;
+    windowWidth = dockSize;
+    windowHeight = height;
+  } else if (dockPosition === 'left') {
+    x = 0;
+    y = 0;
+    windowWidth = dockSize;
+    windowHeight = height;
+  } else if (dockPosition === 'top') {
+    x = 0;
+    y = 0;
+    windowWidth = width;
+    windowHeight = dockSize;
+  } else if (dockPosition === 'bottom') {
+    x = 0;
+    y = height - dockSize;
+    windowWidth = width;
+    windowHeight = dockSize;
+  } else {
+    // Default to right
+    x = width - dockSize;
+    y = 0;
+    windowWidth = dockSize;
+    windowHeight = height;
+  }
+
+  chatWindow = new BrowserWindow({
+    width: windowWidth,
+    height: windowHeight,
+    x: x,
+    y: y,
+    frame: false,
+    transparent: false,
+    alwaysOnTop: isAlwaysOnTop,
+    skipTaskbar: false,
+    resizable: true,
+    opacity: opacity,
+    icon: path.join(__dirname, 'assets', '256_icon.png'),
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'src/preload/chat-preload.js')
+    }
+  });
+
+  chatWindow.loadFile('src/renderer/chat.html');
+
+  chatWindow.on('close', (event) => {
+    // Jika app sedang quit, izinkan close
+    if (app.isQuitting) {
+      return;
+    }
+
+    const serviceSettings = store.get('serviceSettings', { runInBackground: true });
+
+    // Jika run in background, hide saja
+    if (serviceSettings.runInBackground) {
+      event.preventDefault();
+      chatWindow.hide();
+      return;
+    }
+
+    // Jika tidak run in background, quit aplikasi
+    event.preventDefault();
+    app.isQuitting = true;
+    app.quit();
+  });
+
+  chatWindow.on('closed', () => {
+    chatWindow = null;
+  });
+
+  return chatWindow;
+}
+
+// Create onboarding window
+function createOnboardingWindow() {
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+
+  onboardingWindow = new BrowserWindow({
+    width: 720,
+    height: 600,
+    x: Math.floor((width - 720) / 2),
+    y: Math.floor((height - 600) / 2),
+    frame: false,
+    transparent: false,
+    alwaysOnTop: true,
+    skipTaskbar: false,
+    resizable: false,
+    icon: path.join(__dirname, 'assets', '256_icon.png'),
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'src/preload/onboarding-preload.js')
+    }
+  });
+
+  onboardingWindow.loadFile('src/renderer/onboarding.html');
+
+  onboardingWindow.on('closed', () => {
+    onboardingWindow = null;
+  });
+
+  return onboardingWindow;
+}
+
+// Create settings window
+function createSettingsWindow() {
+  settingsWindow = new BrowserWindow({
+    width: 600,
+    height: 650,
+    frame: true,
+    resizable: false,
+    autoHideMenuBar: true,
+    icon: path.join(__dirname, 'assets', '256_icon.png'),
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'src/preload/settings-preload.js')
+    }
+  });
+
+  settingsWindow.setMenu(null);
+  settingsWindow.loadFile('src/renderer/settings.html');
+
+  // Open DevTools for debugging (you can remove this line in production)
+  // settingsWindow.webContents.openDevTools();
+
+  settingsWindow.on('closed', () => {
+    settingsWindow = null;
+  });
+
+  return settingsWindow;
+}
+
+// Create glance mode hint window
+function createGlanceModeHintWindow() {
+  if (glanceModeHintWindow) {
+    glanceModeHintWindow.close();
+  }
+
+  glanceModeHintWindow = new BrowserWindow({
+    width: 460,
+    height: 420,
+    frame: false,
+    resizable: false,
+    center: true,
+    alwaysOnTop: true,
+    autoHideMenuBar: true,
+    icon: path.join(__dirname, 'assets', '256_icon.png'),
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'src/preload/glance-mode-hint-preload.js')
+    }
+  });
+
+  glanceModeHintWindow.loadFile('src/renderer/glance-mode-hint.html');
+
+  glanceModeHintWindow.on('closed', () => {
+    glanceModeHintWindow = null;
+  });
+
+  return glanceModeHintWindow;
+}
+
+
+
+// Create selection bubble window (appears when text is selected)
+function createSelectionBubble(bounds, options = {}) {
+  if (selectionBubbleWindow) {
+    selectionBubbleWindow.close();
+  }
+
+  selectionBubbleWindow = new BrowserWindow({
+    width: BUBBLE_WINDOW_WIDTH,
+    height: BUBBLE_WINDOW_HEIGHT,
+    x: bounds.x,
+    y: bounds.y,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    icon: path.join(__dirname, 'assets', '256_icon.png'),
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'src/preload/bubble-preload.js')
+    }
+  });
+
+  selectionBubbleWindow.loadFile('src/renderer/bubble.html');
+
+  selectionBubbleWindow.webContents.once('did-finish-load', () => {
+    if (options.autoOpenMenu) {
+      selectionBubbleWindow.webContents.send('bubble-auto-open-menu');
+    }
+    if (options.disableAutoHide) {
+      selectionBubbleWindow.webContents.send('bubble-disable-auto-hide');
+    }
+
+    // Send auto-hide duration settings
+    const serviceSettings = store.get('serviceSettings', { runInBackground: true, autoStart: false, autoHideDuration: 4 });
+    const duration = (serviceSettings.autoHideDuration || 4) * 1000; // Convert to ms
+    selectionBubbleWindow.webContents.send('bubble-settings', { autoHideDuration: duration });
+  });
+
+  selectionBubbleWindow.on('blur', () => {
+    suppressClipboardForAutoHide();
+    if (selectionBubbleWindow) {
+      selectionBubbleWindow.close();
+    }
+    // Reset will happen in 'closed' event
+  });
+
+  selectionBubbleWindow.on('closed', () => {
+    selectionBubbleWindow = null;
+    // Reset clipboard tracking so the same text can be copied again
+    // BUT only if we are NOT processing an action (to avoid re-triggering bubble)
+    if (!isProcessingAction) {
+      lastClipboardText = '';
+    }
+    isProcessingAction = false;
+  });
+
+  lastBubbleBounds = bounds;
+  return selectionBubbleWindow;
+}
+
+// Create glance response window (floating AI response for glance mode)
+function createGlanceResponseWindow(bounds) {
+  if (glanceResponseWindow) {
+    glanceResponseWindow.close();
+  }
+
+  glanceResponseWindow = new BrowserWindow({
+    width: GLANCE_RESPONSE_WIDTH,
+    height: 200, // Start small, will auto-resize when content loads
+    x: bounds.x,
+    y: bounds.y,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    icon: path.join(__dirname, 'assets', '256_icon.png'),
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'src/preload/glance-response-preload.js')
+    }
+  });
+
+  glanceResponseWindow.loadFile('src/renderer/glance-response.html');
+
+  glanceResponseWindow.on('closed', () => {
+    glanceResponseWindow = null;
+  });
+
+  glanceResponseWindow.on('blur', () => {
+    if (glanceResponseWindow) {
+      glanceResponseWindow.close();
+    }
+  });
+
+  return glanceResponseWindow;
+}
+
+function shouldSkipAutoBubble() {
+  const focusedWindow = BrowserWindow.getFocusedWindow();
+  if (!focusedWindow) {
+    return false;
+  }
+
+  return (
+    (chatWindow && focusedWindow === chatWindow) ||
+    (settingsWindow && focusedWindow === settingsWindow) ||
+    (selectionBubbleWindow && focusedWindow === selectionBubbleWindow)
+  );
+}
+
+function maybeShowBubbleFromClipboard(text) {
+  // Don't show bubble if onboarding is not completed
+  const onboardingCompleted = store.get('onboardingCompleted', false);
+  if (!onboardingCompleted) {
+    return;
+  }
+
+  if (shouldSkipAutoBubble()) {
+    return;
+  }
+
+  // Check if AI Service is enabled
+  if (!aiServiceEnabled) {
+    return;
+  }
+
+  const now = Date.now();
+  if (now - lastBubbleTimestamp < AUTO_BUBBLE_DEBOUNCE_MS) {
+    return;
+  }
+
+  revealBubbleWithText(text);
+}
+
+function startClipboardWatcher() {
+  // Don't start clipboard watcher if onboarding is not completed
+  const onboardingCompleted = store.get('onboardingCompleted', false);
+  if (!onboardingCompleted) {
+    console.log('Clipboard watcher disabled: onboarding not completed');
+    return;
+  }
+
+  if (clipboardWatcherInterval) {
+    return;
+  }
+
+  try {
+    lastClipboardText = clipboard.readText() || '';
+  } catch (error) {
+    console.error('Failed to seed clipboard watcher:', error);
+    lastClipboardText = '';
+  }
+
+  clipboardWatcherInterval = setInterval(() => {
+    try {
+      const currentText = clipboard.readText();
+      if (currentText === lastClipboardText) {
+        return;
+      }
+      if (autoHideSuppressedTexts.has(currentText)) {
+        lastClipboardText = currentText;
+        return;
+      }
+
+      if (autoHideSuppressedTexts.size > 0) {
+        autoHideSuppressedTexts.clear();
+      }
+
+      lastClipboardText = currentText;
+      maybeShowBubbleFromClipboard(currentText);
+    } catch (error) {
+      console.error('Clipboard watcher error:', error);
+    }
+  }, CLIPBOARD_POLL_INTERVAL);
+}
+
+function stopClipboardWatcher() {
+  if (!clipboardWatcherInterval) {
+    return;
+  }
+  clearInterval(clipboardWatcherInterval);
+  clipboardWatcherInterval = null;
+}
+
+function createTray() {
+  try {
+    // Use logo.png from assets folder
+    const iconPath = path.join(__dirname, 'assets', 'tray_icon.png');
+
+    // Check if icon exists
+    if (!fs.existsSync(iconPath)) {
+      console.warn('Tray icon not found at:', iconPath);
+      return;
+    }
+
+    // Destroy existing tray if it exists to prevent ghost icons
+    if (tray) {
+      console.log('Destroying existing tray before creating new one...');
+      try {
+        tray.destroy();
+        tray = null;
+      } catch (error) {
+        console.error('Error destroying existing tray:', error);
+      }
+    }
+
+    console.log('Creating new tray icon...');
+    tray = new Tray(iconPath);
+
+    tray.setToolTip('PingoAI');
+    updateTrayContextMenu();
+
+    // Double click to open window
+    tray.on('double-click', () => {
+      if (getCurrentAIMode() !== 'panel') {
+        showOrCreateSettingsWindow();
+        return;
+      }
+
+      if (chatWindow) {
+        chatWindow.show();
+        chatWindow.focus();
+      } else {
+        createChatWindow();
+      }
+    });
+  } catch (error) {
+    console.error('Failed to create tray:', error);
+  }
+}
+
+// Setup auto-start dengan nama yang jelas
+function setupAutoStart(enabled) {
+  if (isWindows) {
+    const AutoLaunch = require('auto-launch');
+
+    const autoLauncher = new AutoLaunch({
+      name: 'PingoAI',
+      path: app.getPath('exe'),
+      isHidden: false
+    });
+
+    if (enabled) {
+      autoLauncher.enable()
+        .then(() => console.log('Auto-start enabled'))
+        .catch(err => console.error('Failed to enable auto-start:', err));
+    } else {
+      autoLauncher.disable()
+        .then(() => console.log('Auto-start disabled'))
+        .catch(err => console.error('Failed to disable auto-start:', err));
+    }
+  } else {
+    // Untuk macOS/Linux, gunakan app.setLoginItemSettings
+    app.setLoginItemSettings({
+      openAtLogin: enabled,
+      openAsHidden: false,
+      name: 'PingoAI'
+    });
+  }
+}
+
+app.whenReady().then(() => {
+  // Create system tray
+  createTray();
+
+  // DEMO: Show update alert on startup
+
+
+  const currentAIMode = getCurrentAIMode();
+
+  // Check if onboarding has been completed
+  const onboardingCompleted = store.get('onboardingCompleted', false);
+
+  if (!onboardingCompleted) {
+    // Show onboarding window for first-time users
+    createOnboardingWindow();
+  } else {
+    // Create chat window or show glance hint for returning users
+    if (currentAIMode === 'panel') {
+      createChatWindow();
+    } else {
+      const glanceHintSettings = store.get('glanceModeHintSettings', { showHint: true });
+      if (glanceHintSettings.showHint) {
+        createGlanceModeHintWindow();
+      }
+    }
+  }
+
+  const initialWindowSettings = store.get('windowSettings', {});
+  registerToggleShortcut(initialWindowSettings.toggleShortcut);
+  registerSettingsShortcut(initialWindowSettings.settingsShortcut);
+  registerBubbleShortcut(initialWindowSettings.bubbleShortcut);
+  startClipboardWatcher();
+
+  // Setup auto-start dari saved settings
+  const serviceSettings = store.get('serviceSettings', { runInBackground: true, autoStart: false });
+  if (typeof serviceSettings.autoStart === 'boolean') {
+    setupAutoStart(serviceSettings.autoStart);
+  }
+});
+
+app.on('window-all-closed', () => {
+  const serviceSettings = store.get('serviceSettings', { runInBackground: true });
+  if (serviceSettings.runInBackground) {
+    // Keep running in tray
+    return;
+  }
+
+  app.isQuitting = true;
+  app.quit();
+});
+
+// Cleanup before quit - more reliable than will-quit
+app.on('before-quit', () => {
+  console.log('App is quitting, cleaning up tray...');
+  globalShortcut.unregisterAll();
+  stopClipboardWatcher();
+  if (tray) {
+    tray.destroy();
+    tray = null;
+  }
+});
+
+app.on('will-quit', () => {
+  // Additional cleanup if before-quit didn't fire
+  globalShortcut.unregisterAll();
+  stopClipboardWatcher();
+  if (tray) {
+    tray.destroy();
+    tray = null;
+  }
+});
+
+// Handle process termination signals to clean up tray icon
+process.on('SIGINT', () => {
+  console.log('Received SIGINT, cleaning up...');
+  if (tray) {
+    tray.destroy();
+    tray = null;
+  }
+  app.quit();
+});
+
+process.on('SIGTERM', () => {
+  console.log('Received SIGTERM, cleaning up...');
+  if (tray) {
+    tray.destroy();
+    tray = null;
+  }
+  app.quit();
+});
+
+// Handle uncaught exceptions to prevent ghost tray icons
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception:', error);
+  if (tray) {
+    tray.destroy();
+    tray = null;
+  }
+  app.quit();
+});
+
+// IPC Handlers
+ipcMain.handle('get-settings', async () => {
+  return {
+    apiKey: store.get('apiKey', ''),
+    apiUrl: store.get('apiUrl', 'https://api.openai.com/v1/chat/completions'),
+    model: store.get('model', 'gpt-3.5-turbo'),
+    darkMode: store.get('darkMode', false),
+    windowSettings: store.get('windowSettings', {}),
+    languageSettings: {
+      ...DEFAULT_LANGUAGE_SETTINGS,
+      ...(store.get('languageSettings') || {})
+    },
+    serviceSettings: store.get('serviceSettings', { runInBackground: true, autoStart: false }),
+    aiModeSettings: store.get('aiModeSettings', { mode: 'glance' }),
+    integration: store.get('integration', { type: 'custom' }),
+    onboardingCompleted: store.get('onboardingCompleted', false)
+  };
+});
+
+ipcMain.handle('save-settings', async (event, settings) => {
+  store.set('apiKey', settings.apiKey);
+  store.set('apiUrl', settings.apiUrl);
+  if (settings.model) {
+    store.set('model', settings.model);
+  }
+  if (typeof settings.darkMode === 'boolean') {
+    store.set('darkMode', settings.darkMode);
+  }
+  if (settings.windowSettings) {
+    store.set('windowSettings', settings.windowSettings);
+  }
+  if (settings.languageSettings) {
+    const normalizedLanguage = {
+      ...DEFAULT_LANGUAGE_SETTINGS,
+      ...settings.languageSettings
+    };
+    store.set('languageSettings', normalizedLanguage);
+  }
+  if (settings.serviceSettings) {
+    store.set('serviceSettings', settings.serviceSettings);
+
+    // PERBAIKAN 2: Handle auto-start setting dengan setupAutoStart
+    if (typeof settings.serviceSettings.autoStart === 'boolean') {
+      setupAutoStart(settings.serviceSettings.autoStart);
+    }
+  }
+  if (settings.aiModeSettings && settings.aiModeSettings.mode) {
+    const normalizedMode = settings.aiModeSettings.mode === 'panel' ? 'panel' : 'glance';
+    store.set('aiModeSettings', { mode: normalizedMode });
+  }
+  if (settings.integration) {
+    store.set('integration', settings.integration);
+  }
+  return { success: true };
+});
+
+ipcMain.handle('apply-settings', async (event, settings) => {
+  try {
+    let appliedAIMode = null;
+    // Apply dark mode
+    if (typeof settings.darkMode === 'boolean') {
+      store.set('darkMode', settings.darkMode);
+      if (chatWindow) {
+        chatWindow.webContents.send('apply-dark-mode', settings.darkMode);
+      }
+    }
+
+    if (settings.aiModeSettings && settings.aiModeSettings.mode) {
+      const normalizedMode = settings.aiModeSettings.mode === 'panel' ? 'panel' : 'glance';
+      store.set('aiModeSettings', { mode: normalizedMode });
+      appliedAIMode = normalizedMode;
+    }
+
+    if (settings.windowSettings) {
+      const persistedWindowSettings = store.get('windowSettings', {});
+      const ws = {
+        ...persistedWindowSettings,
+        ...settings.windowSettings
+      };
+
+      const handleShortcutFailure = (message) => {
+        store.set('windowSettings', persistedWindowSettings);
+        broadcastWindowSettings(persistedWindowSettings);
+        return { success: false, error: message };
+      };
+
+      if (ws.toggleShortcut) {
+        const registeredShortcut = registerToggleShortcut(ws.toggleShortcut);
+        if (registeredShortcut) {
+          ws.toggleShortcut = registeredShortcut;
+        } else {
+          return handleShortcutFailure('Failed to register toggle shortcut. Please choose another combination.');
+        }
+      }
+
+      if (ws.settingsShortcut) {
+        const registeredShortcut = registerSettingsShortcut(ws.settingsShortcut);
+        if (registeredShortcut) {
+          ws.settingsShortcut = registeredShortcut;
+        } else {
+          return handleShortcutFailure('Failed to register settings shortcut. Please choose another combination.');
+        }
+      }
+
+      if (ws.bubbleShortcut) {
+        const registeredShortcut = registerBubbleShortcut(ws.bubbleShortcut);
+        if (registeredShortcut) {
+          ws.bubbleShortcut = registeredShortcut;
+        } else {
+          return handleShortcutFailure('Failed to register bubble shortcut. Please choose another combination.');
+        }
+      }
+
+      store.set('windowSettings', ws);
+
+      if (chatWindow) {
+        // Apply always on top
+        if (typeof ws.alwaysOnTop === 'boolean') {
+          chatWindow.setAlwaysOnTop(ws.alwaysOnTop);
+        }
+
+        // Apply transparent with custom opacity
+        if (typeof ws.transparent === 'boolean') {
+          const opacity = ws.transparent ? (ws.opacity || 0.95) : 1.0;
+          chatWindow.setOpacity(opacity);
+        }
+
+        // Apply position and size
+        const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+        const size = ws.dockSize || 400;
+        if (ws.dockPosition === 'right') {
+          chatWindow.setBounds({ x: width - size, y: 0, width: size, height: height });
+        } else if (ws.dockPosition === 'left') {
+          chatWindow.setBounds({ x: 0, y: 0, width: size, height: height });
+        } else if (ws.dockPosition === 'top') {
+          chatWindow.setBounds({ x: 0, y: 0, width: width, height: size });
+        } else if (ws.dockPosition === 'bottom') {
+          chatWindow.setBounds({ x: 0, y: height - size, width: width, height: size });
+        }
+      }
+
+      broadcastWindowSettings(ws);
+    }
+
+    if (settings.languageSettings) {
+      const normalizedLanguage = {
+        ...DEFAULT_LANGUAGE_SETTINGS,
+        ...settings.languageSettings
+      };
+      store.set('languageSettings', normalizedLanguage);
+      broadcastLanguageSettings(normalizedLanguage);
+    }
+
+    if (settings.serviceSettings) {
+      store.set('serviceSettings', settings.serviceSettings);
+
+      // PERBAIKAN 2: Handle auto-start setting dengan setupAutoStart
+      if (typeof settings.serviceSettings.autoStart === 'boolean') {
+        setupAutoStart(settings.serviceSettings.autoStart);
+      }
+    }
+
+    if (appliedAIMode) {
+      syncChatWindowWithAIMode(appliedAIMode);
+    } else {
+      updateTrayContextMenu();
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error applying settings:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('test-ai-connection', async (event, { apiUrl, apiKey, model }) => {
+  if (!apiKey || !apiUrl || !model) {
+    return { success: false, error: 'Missing configuration fields' };
+  }
+
+  try {
+    const axios = require('axios');
+    // Test with a very simple, cheap request
+    await axios.post(apiUrl, {
+      model: model,
+      messages: [
+        { role: 'user', content: 'Hi' }
+      ],
+      max_tokens: 5
+    }, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 60000
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Test connection error:', error.message);
+    const errorMessage = error.response?.data?.error?.message || error.message || 'Connection failed';
+    return { success: false, error: errorMessage };
+  }
+});
+
+ipcMain.handle('send-ai-message', async (event, { message, action, clearHistory, param }) => {
+  const apiKey = store.get('apiKey');
+  const apiUrl = store.get('apiUrl');
+  const model = store.get('model', 'gpt-3.5-turbo');
+  const languageSettings = store.get('languageSettings', DEFAULT_LANGUAGE_SETTINGS);
+  const aiLanguage = languageSettings.aiLanguage || 'en';
+
+  if (!apiKey) {
+    return { error: 'API Key not configured. Please set it in settings.' };
+  }
+
+  const userInput = (message || '').toString().trim();
+  if (!userInput) {
+    const errorMsg = aiLanguage === 'id' ? 'Teks tidak boleh kosong.' : 'Text cannot be empty.';
+    return { error: errorMsg };
+  }
+
+  // Clear history if requested (for new action-based requests)
+  if (clearHistory) {
+    conversationHistory = [];
+  }
+
+  try {
+    const axios = require('axios');
+    const aiLanguage = languageSettings.aiLanguage || 'en';
+    const systemPrompt = aiLanguage === 'id' ? SYSTEM_PROMPT_ID : SYSTEM_PROMPT_EN;
+
+    // Build messages array with system prompt and history
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...conversationHistory, // Include conversation history
+      { role: 'user', content: userInput }
+    ];
+
+    let requestUrl = apiUrl;
+    let requestHeaders = {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    };
+    let requestData = {
+      model,
+      messages,
+      max_tokens: 1000
+    };
+
+    // Check integration type
+    const integration = store.get('integration', { type: 'custom' });
+
+    // Jika menggunakan 'free' integration (PHP Proxy)
+    if (integration.type === 'free') {
+      console.log('🚀 Using PHP Proxy for Free Integration');
+      requestUrl = SERVER_URL;
+      // Untuk PHP proxy, kita tidak butuh Bearer token di header client
+      // karena token ada di server PHP.
+      requestHeaders = {
+        'Content-Type': 'application/json'
+      };
+      // Data tetap sama, server PHP yang akan meneruskan
+    }
+
+    // Call AI API
+    const response = await axios.post(requestUrl, requestData, {
+      headers: requestHeaders,
+      timeout: 60000
+    });
+
+    // Handle response structure difference if any (PHP proxy should return same structure)
+    const aiMessage = response.data.choices
+      ? response.data.choices[0].message.content
+      : response.data.message; // Fallback if PHP returns simplified JSON
+
+    // Add AI response to history
+    conversationHistory.push({ role: 'assistant', content: aiMessage });
+    trimHistory();
+
+    return {
+      success: true,
+      message: aiMessage
+    };
+  } catch (error) {
+    console.error('AI API Error:', error);
+    return {
+      error: error.response?.data?.error?.message || error.message || 'Failed to connect to AI service'
+    };
+  }
+});
+
+ipcMain.handle('show-selection-bubble', async (event, bounds) => {
+  createSelectionBubble(bounds);
+  return { success: true };
+});
+
+ipcMain.handle('hide-selection-bubble', async (event, options = {}) => {
+  const reason = options?.reason || 'default';
+
+  if (reason === 'auto-hide') {
+    suppressClipboardForAutoHide();
+  } else {
+    autoHideSuppressedTexts.clear();
+  }
+
+  if (selectionBubbleWindow) {
+    selectionBubbleWindow.close();
+  }
+
+  // Jika ditutup karena memilih action, JANGAN reset lastClipboardText.
+  // Ini mencegah clipboard watcher memicu bubble baru untuk teks yang sama saat glance window muncul.
+  if (reason !== 'action-selected') {
+    // Reset clipboard tracking so the same text can be used again (for manual close/auto-hide)
+    lastClipboardText = '';
+  }
+
+  return { success: true };
+});
+
+ipcMain.handle('send-text-action', async (event, { action, param }) => {
+  console.log('[IPC] send-text-action called');
+  console.log('[IPC] selectedText length:', selectedText?.length);
+
+  // Set flag to prevent clipboard watcher from re-triggering bubble
+  isProcessingAction = true;
+
+  // Check for duplicate text processing - REMOVED to allow repeated actions (e.g. translate to different languages)
+  // We still track it but don't block
+  const currentText = selectedText?.trim() || '';
+  lastProcessedText = currentText;
+
+  // PENTING: Hide selection bubble immediately for better UX
+  if (selectionBubbleWindow) {
+    console.log('[IPC] Hiding and closing bubble window...');
+    selectionBubbleWindow.hide();
+    selectionBubbleWindow.close(); // Close asynchronously
+  }
+
+  // Get AI mode setting
+  const aiModeSettings = store.get('aiModeSettings', { mode: 'glance' });
+  const aiMode = aiModeSettings.mode || 'glance';
+
+  console.log('[IPC] AI Mode:', aiMode);
+
+  if (aiMode === 'glance') {
+    // GLANCE MODE: Show response in floating bubble
+
+    // Calculate position for glance response (near cursor or center of selection bubble)
+    const cursorPoint = screen.getCursorScreenPoint();
+    const currentDisplay = screen.getDisplayNearestPoint(cursorPoint);
+    const { x: displayX, y: displayY, width: screenWidth, height: screenHeight } = currentDisplay.workArea;
+
+    // Position to the right of cursor, or left if not enough space
+    let responseX = cursorPoint.x + 20;
+    let responseY = cursorPoint.y - 50;
+
+    // Check if it fits on the right side
+    if (responseX + GLANCE_RESPONSE_WIDTH > displayX + screenWidth) {
+      responseX = cursorPoint.x - GLANCE_RESPONSE_WIDTH - 20;
+    }
+
+    // Check vertical bounds
+    if (responseY < displayY) {
+      responseY = displayY + 10;
+    } else if (responseY + GLANCE_RESPONSE_MAX_HEIGHT > displayY + screenHeight) {
+      responseY = displayY + screenHeight - GLANCE_RESPONSE_MAX_HEIGHT - 10;
+    }
+
+    console.log('[IPC] Creating glance response at:', { x: responseX, y: responseY });
+
+    // Create glance response window
+    createGlanceResponseWindow({ x: responseX, y: responseY });
+
+    // Process AI request in background
+    if (selectedText) {
+      try {
+        // Build the AI message
+        const apiKey = store.get('apiKey');
+        const apiUrl = store.get('apiUrl');
+        const model = store.get('model', 'gpt-3.5-turbo');
+        const languageSettings = store.get('languageSettings', DEFAULT_LANGUAGE_SETTINGS);
+        const aiLanguage = languageSettings.aiLanguage || 'en';
+
+        if (!apiKey) {
+          if (glanceResponseWindow) {
+            glanceResponseWindow.webContents.send('glance-ai-response', {
+              error: 'API Key not configured. Please set up your API key in Settings.',
+              action: action
+            });
+          }
+          return { success: false, error: 'No API key' };
+        }
+
+        // Build AI message based on action
+        const axios = require('axios');
+        const systemPrompt = aiLanguage === 'id' ? SYSTEM_PROMPT_ID : SYSTEM_PROMPT_EN;
+
+        // Generate action-specific prompt
+        let userMessage = selectedText;
+
+        if (action === 'explain') {
+          userMessage = aiLanguage === 'id'
+            ? `Jelaskan isi teks ini dengan bahasa yang ringkas, jelas, dan mudah dipahami. Fokus ke makna utama, tambahkan konteks jika perlu, dan hindari mengubah fakta dari teks asli.\n\n${selectedText}`
+            : `Explain the content of this text in concise, clear, and easy-to-understand language. Focus on the main meaning, add context if necessary, and avoid changing facts from the original text.\n\n${selectedText}`;
+        } else if (action === 'summarize') {
+          userMessage = aiLanguage === 'id'
+            ? `Ringkas teks ini menjadi poin-poin pentingnya tanpa menghilangkan inti informasi. Jangan tambahin info baru, cukup rangkum yang ada.\n\n${selectedText}`
+            : `Summarize this text into key points without losing the core information. Do not add new info, just summarize what is there.\n\n${selectedText}`;
+        } else if (action === 'formalize') {
+          userMessage = aiLanguage === 'id'
+            ? `Ubah teks ini menjadi versi yang lebih formal, rapi, dan sesuai bahasa profesional. Jangan ubah makna, hanya tingkatkan struktur dan pilihan katanya.\n\n${selectedText}`
+            : `Transform this text into a more formal, neat, and professional version. Do not change the meaning, only improve the structure and word choice.\n\n${selectedText}`;
+        } else if (action === 'bullet-points') {
+          userMessage = aiLanguage === 'id'
+            ? `Ubah teks ini menjadi daftar poin yang terstruktur. Pisahkan tiap ide utama, pakai bullet dan bahasa yang padat.\n\n${selectedText}`
+            : `Convert this text into a structured list of points. Separate each main idea, use bullets and concise language.\n\n${selectedText}`;
+        } else if (action === 'translate') {
+          userMessage = aiLanguage === 'id'
+            ? `Terjemahkan ke ${param || 'English'}: ${selectedText}`
+            : `Translate to ${param || 'English'}: ${selectedText}`;
+        } else if (action === 'custom') {
+          userMessage = `${param}: ${selectedText}`;
+        }
+
+        let requestUrl = apiUrl;
+        let requestHeaders = {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        };
+        let requestData = {
+          model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userMessage }
+          ]
+        };
+
+        // Check integration type
+        const integration = store.get('integration', { type: 'custom' });
+
+        // Jika menggunakan 'free' integration (PHP Proxy)
+        if (integration.type === 'free') {
+          console.log('🚀 Using PHP Proxy for Free Integration (Glance Mode)');
+          requestUrl = SERVER_URL;
+          requestHeaders = {
+            'Content-Type': 'application/json'
+          };
+        }
+
+        // Call AI API
+        const response = await axios.post(requestUrl, requestData, {
+          headers: requestHeaders,
+          timeout: 60000
+        });
+
+        const aiMessage = response.data.choices[0].message.content;
+
+        // Send response to glance window
+        if (glanceResponseWindow) {
+          glanceResponseWindow.webContents.send('glance-ai-response', {
+            response: aiMessage,
+            action: action
+          });
+        }
+
+        return { success: true, mode: 'glance' };
+      } catch (error) {
+        console.error('AI API Error:', error);
+        if (glanceResponseWindow) {
+          glanceResponseWindow.webContents.send('glance-ai-response', {
+            error: error.response?.data?.error?.message || error.message || 'Failed to connect to AI service',
+            action: action
+          });
+        }
+        return { success: false, error: error.message };
+      }
+    }
+  } else {
+    // PANEL MODE: Open chat window (existing behavior)
+    if (chatWindow) {
+      chatWindow.setAlwaysOnTop(true);
+      chatWindow.show();
+      chatWindow.focus();
+    } else {
+      createChatWindow(true);
+    }
+
+    // Send the selected text with action to chat window
+    if (chatWindow && selectedText) {
+      console.log('[IPC] Sending to chat window, text length:', selectedText.length);
+      chatWindow.webContents.send('process-selected-text', {
+        text: selectedText,
+        action: action,
+        param: param
+      });
+    } else {
+      console.log('[IPC] No chat window or no selected text');
+    }
+
+    return { success: true, mode: 'panel' };
+  }
+});
+
+ipcMain.handle('open-settings', async () => {
+  showOrCreateSettingsWindow();
+  return { success: true };
+});
+
+ipcMain.handle('clear-conversation', async () => {
+  conversationHistory = [];
+  return { success: true };
+});
+
+ipcMain.handle('is-window-pinned', async () => {
+  if (!chatWindow) {
+    return { success: true, isPinned: false };
+  }
+  return { success: true, isPinned: chatWindow.isAlwaysOnTop() };
+});
+
+ipcMain.handle('get-window-state', async () => {
+  const windowSettings = store.get('windowSettings', {});
+  return {
+    success: true,
+    transparent: windowSettings.transparent || false,
+    alwaysOnTop: chatWindow ? chatWindow.isAlwaysOnTop() : (windowSettings.alwaysOnTop || false),
+    darkMode: store.get('darkMode', false),
+    toggleShortcut: windowSettings.toggleShortcut || DEFAULT_TOGGLE_SHORTCUT,
+    settingsShortcut: windowSettings.settingsShortcut || DEFAULT_SETTINGS_SHORTCUT,
+    bubbleShortcut: windowSettings.bubbleShortcut || DEFAULT_BUBBLE_SHORTCUT
+  };
+});
+
+ipcMain.handle('set-dark-mode', async (event, isDark) => {
+  store.set('darkMode', isDark);
+  return { success: true };
+});
+
+ipcMain.handle('toggle-transparent', async () => {
+  if (!chatWindow) {
+    return { success: false };
+  }
+  const windowSettings = store.get('windowSettings', {});
+  const newTransparent = !windowSettings.transparent;
+  windowSettings.transparent = newTransparent;
+  store.set('windowSettings', windowSettings);
+  const opacity = newTransparent ? (windowSettings.opacity || 0.95) : 1.0;
+  chatWindow.setOpacity(opacity);
+  return { success: true, transparent: newTransparent };
+});
+
+ipcMain.handle('show-chat-window', async (event, options = {}) => {
+  if (getCurrentAIMode() !== 'panel') {
+    return { success: false, error: 'Chat window is disabled in Glance Mode.' };
+  }
+
+  const alwaysOnTop = options.alwaysOnTop || false;
+
+  if (chatWindow) {
+    if (alwaysOnTop) {
+      chatWindow.setAlwaysOnTop(true);
+    }
+    chatWindow.show();
+    chatWindow.focus();
+  } else {
+    createChatWindow(alwaysOnTop);
+  }
+  return { success: true };
+});
+
+ipcMain.handle('hide-chat-window', async () => {
+  if (chatWindow) {
+    chatWindow.hide();
+  }
+  return { success: true };
+});
+
+ipcMain.handle('close-chat-window', async () => {
+  const serviceSettings = store.get('serviceSettings', { runInBackground: true, autoStart: false });
+  if (serviceSettings.runInBackground) {
+    if (chatWindow) {
+      chatWindow.hide();
+    }
+    return { success: true, action: 'hide' };
+  }
+
+  app.isQuitting = true;
+  if (chatWindow) {
+    chatWindow.close();
+  } else {
+    app.quit();
+  }
+  return { success: true, action: 'quit' };
+});
+
+ipcMain.handle('minimize-chat-window', async () => {
+  if (chatWindow) {
+    chatWindow.minimize();
+  }
+  return { success: true };
+});
+
+ipcMain.handle('close-settings-window', async () => {
+  if (settingsWindow) {
+    settingsWindow.close();
+    return { success: true };
+  }
+  return { success: false, error: 'Settings window not open' };
+});
+
+// Close glance mode hint window
+ipcMain.handle('close-glance-hint', async () => {
+  if (glanceModeHintWindow) {
+    glanceModeHintWindow.close();
+    return { success: true };
+  }
+  return { success: false };
+});
+
+// Save glance hint preference
+ipcMain.handle('save-glance-hint-preference', async (event, showHint) => {
+  try {
+    store.set('glanceModeHintSettings.showHint', showHint);
+    return { success: true };
+  } catch (error) {
+    console.error('Error saving glance hint preference:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('toggle-pin-window', async () => {
+  if (chatWindow) {
+    const isPinned = chatWindow.isAlwaysOnTop();
+    chatWindow.setAlwaysOnTop(!isPinned);
+    const windowSettings = store.get('windowSettings', {});
+    windowSettings.alwaysOnTop = !isPinned;
+    store.set('windowSettings', windowSettings);
+    broadcastWindowSettings(windowSettings);
+    return { success: true, isPinned: !isPinned };
+  }
+  return { success: false, isPinned: false };
+});
+
+ipcMain.handle('get-selected-text', async () => {
+  // This will be called from bubble window
+  return { text: '' };
+});
+
+ipcMain.handle('set-window-opacity', async (event, opacity) => {
+  // Get the window that sent the request
+  const senderWindow = BrowserWindow.fromWebContents(event.sender);
+  if (senderWindow) {
+    const validOpacity = Math.min(1.0, Math.max(0.3, opacity));
+    senderWindow.setOpacity(validOpacity);
+    return { success: true, opacity: validOpacity };
+  }
+  return { success: false, error: 'Window not found' };
+});
+
+ipcMain.handle('get-free-integration-defaults', async () => {
+  return {
+    success: true,
+    defaults: {
+      apiKey: 'free-tier', // Dummy value
+      apiUrl: SERVER_URL,
+      model: 'openai/gpt-oss-120b' // Default Groq model
+    }
+  };
+});
+
+// Onboarding IPC Handlers
+ipcMain.handle('complete-onboarding', async (event, config) => {
+  try {
+    // const freeDefaults = loadFreeIntegrationDefaults(); // REMOVED
+
+    // Persist onboarding settings
+    const settings = {};
+
+    // Language settings
+    settings.languageSettings = {
+      interfaceLanguage: config.language || 'en',
+      aiLanguage: config.language || 'en'
+    };
+
+    // Theme settings
+    if (config.theme === 'dark') {
+      settings.darkMode = true;
+    } else if (config.theme === 'light') {
+      settings.darkMode = false;
+    }
+    // system theme: don't set darkMode, let it be handled by OS
+
+    // Integration settings
+    if (config.integration === 'free') {
+      settings.apiUrl = SERVER_URL;
+      settings.apiKey = 'free-tier';
+      settings.model = 'openai/gpt-oss-120b'; // Default Groq model
+      store.set('integration', { type: 'free' });
+    } else if (config.integration === 'custom' && config.customApi) {
+      // Custom: save user's custom API settings
+      settings.apiUrl = config.customApi.url;
+      settings.apiKey = config.customApi.key;
+      settings.model = config.customApi.model;
+      store.set('integration', {
+        type: 'custom',
+        url: config.customApi.url,
+        model: config.customApi.model
+      });
+    } else {
+      // Custom without data: user will fill in settings later
+      store.set('integration', { type: 'custom' });
+    }
+
+    // AI Mode settings (Default: panel)
+    if (config.aiMode) {
+      store.set('aiModeSettings', { mode: config.aiMode });
+    }
+
+    // Service settings (Default: run in background)
+    if (config.runInBackground !== undefined) {
+      const currentServiceSettings = store.get('serviceSettings', { runInBackground: true, autoStart: false });
+      store.set('serviceSettings', { ...currentServiceSettings, runInBackground: config.runInBackground });
+    }
+
+    // Save all settings
+    store.set('languageSettings', settings.languageSettings);
+    if (typeof settings.darkMode === 'boolean') {
+      store.set('darkMode', settings.darkMode);
+    }
+    if (settings.apiUrl) store.set('apiUrl', settings.apiUrl);
+    if (settings.apiKey) store.set('apiKey', settings.apiKey);
+    if (settings.model) store.set('model', settings.model);
+
+    // Mark onboarding as completed
+    store.set('onboardingCompleted', true);
+
+    // Close onboarding window
+    if (onboardingWindow) {
+      onboardingWindow.close();
+      onboardingWindow = null;
+    }
+
+    // Ensure UI matches latest AI mode preference
+    syncChatWindowWithAIMode();
+
+    // Now enable clipboard watcher and bubble features
+    const initialWindowSettings = store.get('windowSettings', {});
+    registerBubbleShortcut(initialWindowSettings.bubbleShortcut);
+    startClipboardWatcher();
+    console.log('✅ Onboarding completed - Bubble AI features enabled');
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error completing onboarding:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.on('cancel-onboarding', () => {
+  if (onboardingWindow) {
+    onboardingWindow.close();
+    onboardingWindow = null;
+  }
+  // Quit app if onboarding is cancelled
+  app.quit();
+});
+
+ipcMain.on('minimize-window', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win) {
+    win.minimize();
+  }
+});
+
+ipcMain.handle('close-glance-response', async () => {
+  if (glanceResponseWindow) {
+    glanceResponseWindow.close();
+  }
+  return { success: true };
+});
+
+ipcMain.handle('glance-response-back', async () => {
+  // Close glance response window
+  if (glanceResponseWindow) {
+    glanceResponseWindow.close();
+  }
+
+  // PENTING: Close selection bubble juga
+  if (selectionBubbleWindow) {
+    selectionBubbleWindow.close();
+  }
+
+  let reusableText = selectedText;
+  if (!reusableText || reusableText.trim().length < MIN_CLIPBOARD_TEXT_LENGTH) {
+    try {
+      reusableText = clipboard.readText();
+    } catch (error) {
+      console.error('Failed to read clipboard for glance-response-back:', error);
+      reusableText = '';
+    }
+  }
+
+  if (reusableText && reusableText.trim().length >= MIN_CLIPBOARD_TEXT_LENGTH) {
+    // Delay pembukaan bubble agar window sebelumnya sudah fully closed
+    setTimeout(() => {
+      revealBubbleWithText(reusableText, null, lastBubbleBounds, { autoOpenMenu: true, disableAutoHide: true });
+    }, 100);
+    return { success: true, reopened: true };
+  }
+
+  return { success: true, reopened: false };
+});
+
+ipcMain.handle('resize-glance-response', async (event, height) => {
+  if (!glanceResponseWindow) return;
+
+  const bounds = glanceResponseWindow.getBounds();
+  // Ensure height is a valid number and at least 100px (header + some content)
+  const safeHeight = Number.isFinite(height) ? Math.max(100, height) : 100;
+  const newHeight = Math.min(safeHeight, GLANCE_RESPONSE_MAX_HEIGHT);
+
+  // Only resize if height changed significantly to avoid jitter
+  if (Math.abs(bounds.height - newHeight) > 2) {
+    glanceResponseWindow.setBounds({
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: newHeight
+    });
+  }
+});
+
+ipcMain.handle('preview-panel-size', async (event, { size, position }) => {
+  if (!chatWindow) {
+    return { success: false, error: 'Chat window not found' };
+  }
+
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+  const dockSize = Math.min(600, Math.max(300, size));
+  const dockPosition = position || 'right';
+
+  let x, y, windowWidth, windowHeight;
+  if (dockPosition === 'right') {
+    x = width - dockSize;
+    y = 0;
+    windowWidth = dockSize;
+    windowHeight = height;
+  } else if (dockPosition === 'left') {
+    x = 0;
+    y = 0;
+    windowWidth = dockSize;
+    windowHeight = height;
+  } else if (dockPosition === 'top') {
+    x = 0;
+    y = 0;
+    windowWidth = width;
+    windowHeight = dockSize;
+  } else if (dockPosition === 'bottom') {
+    x = 0;
+    y = height - dockSize;
+    windowWidth = width;
+    windowHeight = dockSize;
+  }
+
+  chatWindow.setBounds({ x, y, width: windowWidth, height: windowHeight }, true);
+  return { success: true };
+});
+
+ipcMain.handle('restore-panel-size', async () => {
+  if (!chatWindow) {
+    return { success: false, error: 'Chat window not found' };
+  }
+
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+  const windowSettings = store.get('windowSettings', {});
+  const dockPosition = windowSettings.dockPosition || 'right';
+  const dockSize = windowSettings.dockSize || 400;
+
+  let x, y, windowWidth, windowHeight;
+  if (dockPosition === 'right') {
+    x = width - dockSize;
+    y = 0;
+    windowWidth = dockSize;
+    windowHeight = height;
+  } else if (dockPosition === 'left') {
+    x = 0;
+    y = 0;
+    windowWidth = dockSize;
+    windowHeight = height;
+  } else if (dockPosition === 'top') {
+    x = 0;
+    y = 0;
+    windowWidth = width;
+    windowHeight = dockSize;
+  } else if (dockPosition === 'bottom') {
+    x = 0;
+    y = height - dockSize;
+    windowWidth = width;
+    windowHeight = dockSize;
+  }
+
+  chatWindow.setBounds({ x, y, width: windowWidth, height: windowHeight }, true);
+  return { success: true };
+});
+
+ipcMain.handle('set-window-blur', async (event, { enabled, intensity }) => {
+  // Get the window that sent the request
+  const senderWindow = BrowserWindow.fromWebContents(event.sender);
+  if (senderWindow) {
+    try {
+      if (enabled) {
+        // For preview on settings window, we need transparent background
+        // Note: Full blur effect requires window recreation
+        if (process.platform === 'win32') {
+          try {
+            senderWindow.setBackgroundMaterial('acrylic');
+          } catch (e) {
+            console.log('Acrylic not supported, using mica');
+            senderWindow.setBackgroundMaterial('mica');
+          }
+        } else if (process.platform === 'darwin') {
+          senderWindow.setVibrancy('under-window');
+        }
+      } else {
+        if (process.platform === 'win32') {
+          senderWindow.setBackgroundMaterial('none');
+        } else if (process.platform === 'darwin') {
+          senderWindow.setVibrancy(null);
+        }
+      }
+      return { success: true, enabled, intensity };
+    } catch (error) {
+      console.error('Error setting blur:', error);
+      return { success: false, error: error.message };
+    }
+  }
+  return { success: false, error: 'Window not found' };
+});

@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>PingoAI - Glance Mode</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --background: 0 0% 100%;
+        --foreground: 240 10% 3.9%;
+        --card: 0 0% 100%;
+        --card-foreground: 240 10% 3.9%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 240 10% 3.9%;
+        --primary: 16 100% 60%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 240 4.8% 95.9%;
+        --secondary-foreground: 240 5.9% 10%;
+        --muted: 240 4.8% 95.9%;
+        --muted-foreground: 240 3.8% 46.1%;
+        --accent: 240 4.8% 95.9%;
+        --accent-foreground: 240 5.9% 10%;
+        --destructive: 0 84.2% 60.2%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 240 5.9% 90%;
+        --input: 240 5.9% 90%;
+        --ring: 16 100% 60%;
+        --radius: 0.5rem;
+      }
+
+      body.dark-mode {
+        --background: 215 28% 17%;
+        --foreground: 210 20% 98%;
+        --card: 215 28% 17%;
+        --card-foreground: 210 20% 98%;
+        --popover: 215 28% 17%;
+        --popover-foreground: 210 20% 98%;
+        --primary: 16 100% 60%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 220 39% 11%;
+        --secondary-foreground: 210 20% 98%;
+        --muted: 220 39% 11%;
+        --muted-foreground: 218 11% 65%;
+        --accent: 220 39% 11%;
+        --accent-foreground: 210 20% 98%;
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 217 19% 27%;
+        --input: 217 19% 27%;
+        --ring: 16 100% 60%;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", sans-serif;
+        background: hsl(var(--background));
+        color: hsl(var(--foreground));
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        transition: background-color 0.3s ease, color 0.3s ease;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      .container {
+        max-width: 460px;
+        width: 90%;
+        background: hsl(var(--card));
+        padding: 32px 32px 24px 32px;
+        display: flex;
+        text-align: left;
+        flex-direction: column;
+        position: relative;
+        -webkit-app-region: drag;
+      }
+
+      .container * {
+        -webkit-app-region: no-drag;
+      }
+
+      .close-btn {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        width: 28px;
+        height: 28px;
+        border: none;
+        background: transparent;
+        color: hsl(var(--muted-foreground));
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        transition: all 0.15s ease;
+        font-size: 20px;
+        font-weight: 400;
+        padding: 0;
+        -webkit-app-region: no-drag;
+      }
+
+      .close-btn:hover {
+        background: hsl(var(--secondary));
+        color: hsl(var(--foreground));
+      }
+
+      .illustration {
+        text-align: center;
+        margin-bottom: 20px;
+        margin-top: 60px;
+      }
+
+      .taskbar-illustration {
+        background: linear-gradient(
+          180deg,
+          hsl(var(--secondary)) 0%,
+          hsl(var(--background)) 100%
+        );
+        border: 1px solid hsl(var(--border));
+        border-radius: var(--radius);
+        padding: 16px;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 12px;
+        height: 52px;
+      }
+
+      .taskbar-icon {
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: hsl(var(--foreground));
+        opacity: 0.7;
+      }
+
+      .taskbar-icon svg {
+        width: 100%;
+        height: 100%;
+        fill: currentColor;
+      }
+
+      .taskbar-divider {
+        width: 1px;
+        height: 24px;
+        background: hsl(var(--border));
+        margin: 0 4px;
+      }
+
+      .pingo-icon {
+        width: 24px;
+        height: 24px;
+        opacity: 1;
+        animation: pulse 2s infinite;
+      }
+
+      .pingo-icon img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      .pingo-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.6;
+        }
+      }
+
+      h2 {
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 10px;
+        color: hsl(var(--foreground));
+        letter-spacing: -0.025em;
+        /* text-align: center; */
+      }
+
+      p {
+        font-size: 14px;
+        color: hsl(var(--muted-foreground));
+        margin-bottom: 16px;
+        line-height: 1.6;
+        /* text-align: center; */
+      }
+
+      .info-box {
+        background: hsl(var(--primary) / 0.1);
+        border: 1px solid hsl(var(--primary) / 0.2);
+        border-radius: var(--radius);
+        padding: 16px;
+        margin-bottom: 24px;
+        font-size: 13px;
+        line-height: 1.6;
+        color: hsl(var(--foreground));
+      }
+
+      .info-box strong {
+        color: hsl(var(--primary));
+        font-weight: 600;
+      }
+
+      .checkbox-container {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        border: 1px solid hsl(var(--border));
+        border-radius: var(--radius);
+        cursor: pointer;
+        transition: all 0.15s ease;
+        font-size: 14px;
+        background: hsl(var(--background));
+        margin-bottom: 16px;
+      }
+
+      .checkbox-container:hover {
+        background: hsl(var(--secondary));
+        border-color: hsl(var(--primary) / 0.4);
+      }
+
+      .checkbox-container input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: hsl(var(--primary));
+      }
+
+      .btn {
+        width: 100%;
+        padding: 12px 24px;
+        border: none;
+        border-radius: var(--radius);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-family: inherit;
+      }
+
+      .btn-primary {
+        background: hsl(var(--primary));
+        color: hsl(var(--primary-foreground));
+      }
+
+      .btn-primary:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+      }
+
+      .mock-popup {
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        margin-bottom: 12px;
+        background: hsl(var(--card));
+        border: 1px solid hsl(var(--border));
+        border-radius: var(--radius);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        padding: 4px;
+        min-width: 140px;
+        z-index: 10;
+        animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        animation-delay: 0.5s;
+        opacity: 0;
+      }
+
+      .mock-popup-item {
+        padding: 8px 12px;
+        font-size: 13px;
+        color: hsl(var(--foreground));
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: default;
+      }
+
+      .mock-popup-item.active {
+        background: hsl(var(--primary));
+        color: hsl(var(--primary-foreground));
+      }
+
+      .mock-popup-divider {
+        height: 1px;
+        background: hsl(var(--border));
+        margin: 4px 0;
+      }
+
+      @keyframes slideUp {
+        from { opacity: 0; transform: translate(-50%, 10px); }
+        to { opacity: 1; transform: translate(-50%, 0); }
+      }
+
+      .mouse-cursor {
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        z-index: 20;
+        top: 42px; /* Approx position over Settings */
+        left: 60%;
+        pointer-events: none;
+        opacity: 0;
+        animation: cursorFadeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        animation-delay: 1s;
+      }
+
+      .mouse-cursor svg {
+        width: 100%;
+        height: 100%;
+        fill: white;
+        stroke: black;
+        stroke-width:0.5px;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+      }
+
+      @keyframes cursorFadeIn {
+        from {
+          opacity: 0;
+          transform: translate(10px, 20px);
+        }
+        to {
+          opacity: 1;
+          transform: translate(0, 0);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <button class="close-btn" id="closeBtn">×</button>
+
+      <div class="illustration">
+        <div class="taskbar-illustration">
+          <!-- PingoAI Icon Wrapper -->
+          <div class="pingo-wrapper">
+            <div class="pingo-icon">
+              <img src="../../assets/256_icon.png" alt="PingoAI" />
+            </div>
+            
+            <!-- Mock Popup -->
+            <div class="mock-popup">
+              <div class="mock-popup-item">Open</div>
+              <div class="mock-popup-item active">Settings</div>
+              <div class="mock-popup-divider"></div>
+              <div class="mock-popup-item">Quit</div>
+              
+              <!-- Mouse Cursor -->
+              <div class="mouse-cursor">
+                <svg viewBox="0 0 24 24">
+                  <path d="M7,2l12,11.2l-5.8,0.5l3.3,7.3l-2.2,0.9l-3.2-7.4l-4.4,4L7,2z"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="taskbar-divider"></div>
+
+          <!-- WiFi Icon -->
+          <div class="taskbar-icon">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M12,21 L12.73,20.28 C10.5,18.08 6.5,18.08 4.27,20.28 L5,21 C7.24,18.76 10.76,18.76 13,21 L12,21 Z M12,3 C7.95,3 4.21,4.34 1.2,6.6 L3,8.4 C5.5,6.58 8.62,5.5 12,5.5 C15.38,5.5 18.5,6.58 21,8.4 L22.8,6.6 C19.79,4.34 16.05,3 12,3 Z M12,9 C9.3,9 6.81,9.89 4.8,11.4 L6.6,13.2 C8.1,12.07 9.97,11.4 12,11.4 C14.03,11.4 15.9,12.07 17.4,13.2 L19.2,11.4 C17.19,9.89 14.7,9 12,9 Z M12,15 C10.66,15 9.44,15.46 8.46,16.23 L12,19.77 L15.54,16.23 C14.56,15.46 13.34,15 12,15 Z"
+              />
+            </svg>
+          </div>
+
+          <!-- Sound Icon -->
+          <div class="taskbar-icon">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M3,9 L3,15 L7,15 L12,20 L12,4 L7,9 L3,9 Z M16.5,12 C16.5,10.23 15.48,8.71 14,7.97 L14,16.02 C15.48,15.29 16.5,13.77 16.5,12 Z M14,3.23 L14,5.29 C16.89,6.15 19,8.83 19,12 C19,15.17 16.89,17.85 14,18.71 L14,20.77 C18.01,19.86 21,16.28 21,12 C21,7.72 18.01,4.14 14,3.23 Z"
+              />
+            </svg>
+          </div>
+
+          <!-- Battery Icon -->
+          <div class="taskbar-icon">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M15.67,4H14V2h-4v2H8.33C7.6,4 7,4.6 7,5.33v15.33C7,21.4 7.6,22 8.33,22h7.33c0.74,0 1.34-0.6 1.34-1.33V5.33 C17,4.6 16.4,4 15.67,4z M16,19H8V6h8V19z"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <h2
+        data-en="Find Us in Your System Tray"
+        data-id="Temukan Kami di System Tray"
+      >
+        Temukan Kami di System Tray
+      </h2>
+
+      <p
+        data-en="Glance mode is active. Chat panel is hidden to reduce distractions. Right-click the PingoAI icon to access settings."
+        data-id="Glance mode aktif. Panel chat disembunyikan untuk mengurangi distraksi. Klik kanan ikon PingoAI untuk membuka pengaturan."
+      >
+        Glance mode aktif. Panel chat disembunyikan untuk mengurangi distraksi.
+        Klik kanan ikon PingoAI untuk membuka pengaturan.
+      </p>
+
+
+
+      <button
+        class="btn btn-primary"
+        id="okBtn"
+        data-en="Got it!"
+        data-id="Mengerti!"
+      >
+        Mengerti!
+      </button>
+    </div>
+
+    <script>
+      const closeBtn = document.getElementById("closeBtn");
+      const okBtn = document.getElementById("okBtn");
+
+      // Load theme and language settings
+      async function loadSettings() {
+        const settings = await window.electronAPI.getSettings();
+
+        // Apply dark mode
+        if (settings.darkMode) {
+          document.body.classList.add("dark-mode");
+        }
+
+        // Apply language
+        const language = settings.languageSettings?.interfaceLanguage || "en";
+        applyLanguage(language);
+      }
+
+      function applyLanguage(lang) {
+        document.querySelectorAll("[data-en][data-id]").forEach((el) => {
+          if (lang === "en") {
+            el.textContent = el.getAttribute("data-en");
+          } else {
+            el.textContent = el.getAttribute("data-id");
+          }
+        });
+      }
+
+      // Close window
+      closeBtn.addEventListener("click", () => {
+        window.electronAPI.closeGlanceHint();
+      });
+
+      okBtn.addEventListener("click", async () => {
+        window.electronAPI.closeGlanceHint();
+      });
+
+      // Listen for theme changes
+      window.electronAPI.onApplyDarkMode((isDark) => {
+        if (isDark) {
+          document.body.classList.add("dark-mode");
+        } else {
+          document.body.classList.remove("dark-mode");
+        }
+      });
+
+      // Load settings on start
+      loadSettings();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,2173 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Welcome to PingoAI</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --background: 0 0% 100%;
+      --foreground: 240 10% 3.9%;
+      --card: 0 0% 100%;
+      --card-foreground: 240 10% 3.9%;
+      --popover: 0 0% 100%;
+      --popover-foreground: 240 10% 3.9%;
+      --primary: 16 100% 60%;
+      --primary-foreground: 0 0% 100%;
+      --secondary: 240 4.8% 95.9%;
+      --secondary-foreground: 240 5.9% 10%;
+      --muted: 240 4.8% 95.9%;
+      --muted-foreground: 240 3.8% 46.1%;
+      --accent: 240 4.8% 95.9%;
+      --accent-foreground: 240 5.9% 10%;
+      --destructive: 0 84.2% 60.2%;
+      --destructive-foreground: 0 0% 98%;
+      --border: 240 5.9% 90%;
+      --input: 240 5.9% 90%;
+      --ring: 16 100% 60%;
+      --radius: 0.5rem;
+    }
+
+    body.dark-mode {
+      --background: 215 28% 17%;
+      --foreground: 210 20% 98%;
+      --card: 215 28% 17%;
+      --card-foreground: 210 20% 98%;
+      --popover: 215 28% 17%;
+      --popover-foreground: 210 20% 98%;
+      --primary: 16 100% 60%;
+      --primary-foreground: 0 0% 100%;
+      --secondary: 220 39% 11%;
+      --secondary-foreground: 210 20% 98%;
+      --muted: 220 39% 11%;
+      --muted-foreground: 218 11% 65%;
+      --accent: 220 39% 11%;
+      --accent-foreground: 210 20% 98%;
+      --destructive: 0 62.8% 30.6%;
+      --destructive-foreground: 0 0% 98%;
+      --border: 217 19% 27%;
+      --input: 217 19% 27%;
+      --ring: 16 100% 60%;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: hsl(var(--background));
+      color: hsl(var(--foreground));
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      transition: background-color 0.3s ease, color 0.3s ease;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .container {
+      max-width: 640px;
+      width: 90%;
+      height: 650px;
+      background: hsl(var(--card));
+      /* border: 1px solid hsl(var(--border));
+      border-radius: calc(var(--radius) + 4px); */
+      padding: 48px;
+      /* box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); */
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      -webkit-app-region: drag;
+    }
+
+    .container * {
+      -webkit-app-region: no-drag;
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 32px;
+      position: relative;
+      -webkit-app-region: drag;
+    }
+
+    .logo img {
+      width: 80px;
+      height: auto;
+      opacity: 0.9;
+    }
+
+    .logo-controls {
+      position: absolute;
+      top: 0;
+      right: -36px;
+      display: flex;
+      gap: 8px;
+      -webkit-app-region: no-drag;
+    }
+
+    .titlebar-btn {
+      width: 28px;
+      height: 28px;
+      border: none;
+      background: transparent;
+      color: hsl(var(--muted-foreground));
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: all 0.15s ease;
+      font-size: 16px;
+      font-weight: 400;
+      padding: 0;
+    }
+
+    .titlebar-btn:hover {
+      background: hsl(var(--accent));
+      color: hsl(var(--foreground));
+    }
+
+    .titlebar-btn.close:hover {
+      background: #dc2626;
+      color: #ffffff;
+    }
+
+    .step-content {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      margin-bottom: 24px;
+    }
+
+    .step {
+      display: none;
+    }
+
+    .step.active {
+      display: block;
+    }
+
+    .step.slide-in-right {
+      animation: slideInRight 0.4s ease;
+    }
+
+    .step.slide-in-left {
+      animation: slideInLeft 0.4s ease;
+    }
+
+    @keyframes slideInRight {
+      from { 
+        opacity: 0; 
+        transform: translateX(30px); 
+      }
+      to { 
+        opacity: 1; 
+        transform: translateX(0); 
+      }
+    }
+
+    @keyframes slideInLeft {
+      from { 
+        opacity: 0; 
+        transform: translateX(-30px); 
+      }
+      to { 
+        opacity: 1; 
+        transform: translateX(0); 
+      }
+    }
+
+    h2 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: hsl(var(--foreground));
+      letter-spacing: -0.025em;
+    }
+
+    p {
+      font-size: 14px;
+      color: hsl(var(--muted-foreground));
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    .form-group {
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border: 1px solid hsl(var(--border));
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-size: 14px;
+      background: hsl(var(--background));
+    }
+
+    label:hover {
+      background: hsl(var(--accent));
+      border-color: hsl(var(--ring) / 0.4);
+    }
+
+    label:has(input:checked) {
+      border-color: hsl(var(--primary));
+      background: hsl(var(--primary) / 0.05);
+    }
+
+    input[type="checkbox"],
+    input[type="radio"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: hsl(var(--primary));
+    }
+
+    .radio-group,
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .radio-inline {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 8px;
+    }
+
+    .theme-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .theme-card {
+      position: relative;
+      display: block;
+      border: 2px solid hsl(var(--border));
+      border-radius: var(--radius);
+      padding: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: hsl(var(--background));
+    }
+
+    .theme-card:hover {
+      border-color: hsl(var(--ring) / 0.5);
+      /* transform: translateY(-2px); */
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .theme-card.selected {
+      border-color: hsl(var(--primary));
+      background: hsl(var(--primary) / 0.05);
+    }
+
+    .theme-card input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .theme-preview {
+      width: 100%;
+      height: 80px;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 8px;
+      border: 1px solid hsl(var(--border));
+      position: relative;
+    }
+
+    .theme-preview-window {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      padding: 0 6px;
+      gap: 4px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .window-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .window-dot:nth-child(1) { background: #ff5f57; }
+    .window-dot:nth-child(2) { background: #febc2e; }
+    .window-dot:nth-child(3) { background: #28c840; }
+
+    .theme-preview-content {
+      position: absolute;
+      top: 20px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 8px;
+    }
+
+    .theme-preview-bar {
+      height: 6px;
+      border-radius: 3px;
+      margin-bottom: 4px;
+    }
+
+    /* Light theme preview */
+    .theme-preview.light {
+      background: #ffffff;
+    }
+
+    .theme-preview.light .theme-preview-window {
+      background: #f5f5f5;
+    }
+
+    .theme-preview.light .theme-preview-bar:nth-child(1) {
+      background: #e0e0e0;
+      width: 70%;
+    }
+
+    .theme-preview.light .theme-preview-bar:nth-child(2) {
+      background: #e0e0e0;
+      width: 50%;
+    }
+
+    .theme-preview.light .theme-preview-bar:nth-child(3) {
+      background: #e0e0e0;
+      width: 60%;
+    }
+
+    /* Dark theme preview */
+    .theme-preview.dark {
+      background: #1a1a1a;
+    }
+
+    .theme-preview.dark .theme-preview-window {
+      background: #2d2d2d;
+      border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .theme-preview.dark .theme-preview-bar:nth-child(1) {
+      background: #3d3d3d;
+      width: 70%;
+    }
+
+    .theme-preview.dark .theme-preview-bar:nth-child(2) {
+      background: #3d3d3d;
+      width: 50%;
+    }
+
+    .theme-preview.dark .theme-preview-bar:nth-child(3) {
+      background: #3d3d3d;
+      width: 60%;
+    }
+
+    /* System theme preview (split) */
+    .theme-preview.system {
+      display: flex;
+    }
+
+    .theme-preview-half {
+      flex: 1;
+      position: relative;
+      height: 100%;
+    }
+
+    .theme-preview-half.light {
+      background: #ffffff;
+      border-right: 1px solid hsl(var(--border));
+    }
+
+    .theme-preview-half.dark {
+      background: #1a1a1a;
+    }
+
+    .theme-preview-half .theme-preview-window {
+      width: 100%;
+    }
+
+    .theme-preview-half.light .theme-preview-window {
+      background: #f5f5f5;
+    }
+
+    .theme-preview-half.dark .theme-preview-window {
+      background: #2d2d2d;
+      border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .theme-preview-half.light .theme-preview-bar {
+      background: #e0e0e0;
+    }
+
+    .theme-preview-half.dark .theme-preview-bar {
+      background: #3d3d3d;
+    }
+
+    .theme-preview-half .theme-preview-bar:nth-child(1) { width: 70%; }
+    .theme-preview-half .theme-preview-bar:nth-child(2) { width: 50%; }
+
+    .theme-card-label {
+      text-align: center;
+      font-size: 13px;
+      font-weight: 500;
+      color: hsl(var(--foreground));
+    }
+
+    .integration-preview {
+      margin-top: 16px;
+      padding: 16px;
+      background: hsl(var(--muted));
+      border: 1px solid hsl(var(--border));
+      border-radius: var(--radius);
+      font-size: 13px;
+      color: hsl(var(--muted-foreground));
+      line-height: 1.6;
+    }
+
+    .integration-preview strong {
+      color: hsl(var(--foreground));
+      font-weight: 600;
+    }
+
+    ol {
+      margin-left: 20px;
+      color: hsl(var(--muted-foreground));
+      line-height: 1.7;
+      font-size: 14px;
+    }
+
+    ol li {
+      margin-bottom: 6px;
+    }
+
+    ol strong {
+      color: hsl(var(--foreground));
+      background: hsl(var(--muted));
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 500;
+      font-size: 13px;
+    }
+
+    .buttons {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: auto;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 16px;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+
+    .btn-secondary {
+      background: hsl(var(--secondary));
+      color: hsl(var(--secondary-foreground));
+      border-color: hsl(var(--border));
+    }
+
+    .btn-secondary:hover {
+      background: hsl(var(--secondary) / 0.8);
+    }
+
+    .btn-primary {
+      background: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
+    }
+
+    .btn-primary:hover {
+      background: hsl(var(--primary) / 0.9);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .eula-text {
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 14px;
+      background: hsl(var(--muted));
+      border: 1px solid hsl(var(--border));
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+      font-size: 13px;
+      line-height: 1.8;
+      color: hsl(var(--muted-foreground));
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    .eula-text strong {
+      font-weight: 600;
+      color: hsl(var(--foreground));
+    }
+
+    .eula-text em {
+      font-style: italic;
+    }
+
+    .eula-text ol,
+    .eula-text ul {
+      margin-left: 20px;
+      margin-top: 8px;
+      margin-bottom: 8px;
+    }
+
+    .eula-text li {
+      margin-bottom: 6px;
+    }
+
+    .eula-text p {
+      margin-bottom: 12px;
+    }
+
+    .eula-text h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-top: 16px;
+      margin-bottom: 8px;
+      color: hsl(var(--foreground));
+    }
+
+    .eula-text::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .eula-text::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .eula-text::-webkit-scrollbar-thumb {
+      background: hsl(var(--border));
+      border-radius: 4px;
+    }
+
+    .step-indicator {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .step-dots {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: hsl(var(--muted));
+      transition: all 0.2s ease;
+    }
+
+    .dot.active {
+      background: hsl(var(--primary));
+      width: 20px;
+      border-radius: 3px;
+    }
+
+    .info-box {
+      margin-top: 16px;
+      padding: 14px 16px;
+      background: hsl(var(--primary) / 0.1);
+      border: 1px solid hsl(var(--primary) / 0.2);
+      border-radius: var(--radius);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .info-box strong {
+      color: hsl(var(--foreground));
+      font-weight: 600;
+    }
+
+    .feature-list {
+      margin-top: 16px;
+      padding: 20px;
+      background: hsl(var(--muted));
+      border: 1px solid hsl(var(--border));
+      border-radius: var(--radius);
+    }
+
+    .feature-list-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: hsl(var(--foreground));
+    }
+
+    .feature-list-items {
+      font-size: 14px;
+      color: hsl(var(--muted-foreground));
+      line-height: 1.8;
+    }
+
+    .final-message {
+      margin-top: 20px;
+      font-size: 14px;
+      color: hsl(var(--muted-foreground));
+    }
+
+    .final-message strong {
+      color: hsl(var(--primary));
+      font-weight: 600;
+    }
+
+    .custom-api-form {
+      margin-top: 16px;
+      padding: 16px;
+      background: hsl(var(--muted));
+      border: 1px solid hsl(var(--border));
+      border-radius: var(--radius);
+      display: none;
+    }
+
+    .custom-api-form.visible {
+      display: block;
+    }
+
+    .input-group {
+      margin-bottom: 16px;
+    }
+
+    .input-group:last-of-type {
+      margin-bottom: 0;
+    }
+
+    .input-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: hsl(var(--foreground));
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 8px 12px;
+      background: hsl(var(--background));
+      border: 1px solid hsl(var(--border));
+      border-radius: var(--radius);
+      font-size: 14px;
+      color: hsl(var(--foreground));
+      font-family: inherit;
+      transition: all 0.15s ease;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: hsl(var(--primary));
+      box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1);
+    }
+
+    .input-field::placeholder {
+      color: hsl(var(--muted-foreground));
+    }
+
+    .btn-test {
+      width: 100%;
+      margin-top: 12px;
+      background: hsl(var(--background));
+      color: hsl(var(--foreground));
+      border: 1px solid hsl(var(--border));
+    }
+
+    .btn-test:hover {
+      background: hsl(var(--accent));
+    }
+
+    .btn-test:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .test-result {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      display: none;
+    }
+
+    .test-result.visible {
+      display: block;
+    }
+
+    .test-result.success {
+      background: hsl(142 76% 36% / 0.1);
+      border: 1px solid hsl(142 76% 36% / 0.2);
+      color: hsl(142 76% 36%);
+    }
+
+    .test-result.error {
+      background: hsl(var(--destructive) / 0.1);
+      border: 1px solid hsl(var(--destructive) / 0.2);
+      color: hsl(var(--destructive));
+    }
+
+    .input-helper {
+      font-size: 12px;
+      color: hsl(var(--muted-foreground));
+      margin-top: 4px;
+    }
+
+    /* Toast Notification */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: #dc2626;
+      border-radius: 6px;
+      padding: 12px 16px;
+      min-width: 280px;
+      max-width: 380px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+      transform: translateX(400px);
+      transition: all 0.3s ease;
+      pointer-events: auto;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .toast.hide {
+      opacity: 0;
+      transform: translateX(400px);
+    }
+
+    .toast-content {
+      flex: 1;
+      color: #ffffff;
+    }
+
+    .toast-title {
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 2px;
+      color: #ffffff;
+    }
+
+    .toast-message {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.95);
+      line-height: 1.4;
+    }
+
+    .toast-close {
+      background: none;
+      border: none;
+      color: #ffffff;
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.8;
+      transition: opacity 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .toast-close:hover {
+      opacity: 1;
+    }
+
+    .toast.success {
+      background: #16a34a;
+    }
+
+    .toast.error {
+      background: #dc2626;
+    }
+
+    .toast.info {
+      background: #2563eb;
+    }
+
+    /* AI Mode Cards */
+    .mode-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 12px;
+    }
+
+    .mode-card {
+      position: relative;
+      display: block;
+      border: 2px solid hsl(var(--border));
+      border-radius: 12px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: hsl(var(--background));
+    }
+
+    .mode-card:hover {
+      border-color: hsl(var(--ring) / 0.5);
+    }
+
+    .mode-card.selected {
+      border-color: hsl(var(--primary));
+      background: hsl(var(--primary) / 0.05);
+    }
+
+    .mode-card input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .mode-card-illustration {
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 60px;
+    }
+
+    /* Glance Mode Illustration */
+    .glance-illustration {
+      justify-content: flex-start;
+    }
+
+    .glance-bubble {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ff8a50, #ff6b35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+    }
+
+    .glance-bubble .bubble-icon {
+      width: 32px;
+      height: 32px;
+      filter: brightness(0) invert(1);
+    }
+
+    .glance-lines {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .glance-lines .line {
+      height: 8px;
+      background: hsl(var(--border));
+      border-radius: 4px;
+      opacity: 0.6;
+    }
+
+    .glance-lines .line.short {
+      width: 60%;
+    }
+
+    /* Panel Mode Illustration */
+    .panel-illustration {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
+
+    .chat-bubble {
+      border-radius: 12px;
+      padding: 8px 12px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .user-bubble {
+      background: hsl(var(--primary) / 0.1);
+      border: 1px solid hsl(var(--primary));
+      align-self: flex-end;
+      max-width: 75%;
+    }
+
+    .ai-bubble {
+      background: hsl(var(--muted));
+      border: 1px solid hsl(var(--border));
+      align-self: flex-start;
+      max-width: 85%;
+    }
+
+    .ai-bubble .ai-avatar {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .bubble-text {
+      height: 6px;
+      background: currentColor;
+      opacity: 0.3;
+      border-radius: 3px;
+      flex: 1;
+      min-width: 60px;
+    }
+
+    .user-bubble .bubble-text {
+      color: hsl(var(--primary));
+    }
+
+    .ai-bubble .bubble-text {
+      color: hsl(var(--muted-foreground));
+    }
+
+    .mode-card-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: hsl(var(--foreground));
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .mode-card-desc {
+      font-size: 13px;
+      color: hsl(var(--muted-foreground));
+      line-height: 1.5;
+      display: block;
+    }
+
+    .mode-card.selected .mode-card-title {
+      color: hsl(var(--primary));
+    }
+
+    /* Animations for AI Mode Cards */
+    @keyframes bubbleZoomIn {
+      from {
+        opacity: 0;
+        transform: scale(0.8);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes lineSlideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+      to {
+        opacity: 0.6;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes chatFadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(15px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Apply animations when step 4 is active */
+    .step[data-step="4"].active .glance-bubble {
+      animation: bubbleZoomIn 0.6s ease-out 0.1s both;
+    }
+
+    .step[data-step="4"].active .glance-lines .line:nth-child(1) {
+      animation: lineSlideIn 0.5s ease-out 0.3s both;
+    }
+
+    .step[data-step="4"].active .glance-lines .line:nth-child(2) {
+      animation: lineSlideIn 0.5s ease-out 0.5s both;
+    }
+
+    .step[data-step="4"].active .glance-lines .line:nth-child(3) {
+      animation: lineSlideIn 0.5s ease-out 0.7s both;
+    }
+
+    .step[data-step="4"].active .user-bubble {
+      animation: chatFadeInUp 0.5s ease-out 0.2s both;
+    }
+
+    .step[data-step="4"].active .ai-bubble {
+      animation: chatFadeInUp 0.5s ease-out 0.5s both;
+    }
+
+    /* Also apply animations when mode card is selected */
+    .mode-card.selected .glance-bubble {
+      animation: bubbleZoomIn 0.6s ease-out 0.1s both;
+    }
+
+    .mode-card.selected .glance-lines .line:nth-child(1) {
+      animation: lineSlideIn 0.5s ease-out 0.3s both;
+    }
+
+    .mode-card.selected .glance-lines .line:nth-child(2) {
+      animation: lineSlideIn 0.5s ease-out 0.5s both;
+    }
+
+    .mode-card.selected .glance-lines .line:nth-child(3) {
+      animation: lineSlideIn 0.5s ease-out 0.7s both;
+    }
+
+    .mode-card.selected .user-bubble {
+      animation: chatFadeInUp 0.5s ease-out 0.2s both;
+    }
+
+    .mode-card.selected .ai-bubble {
+      animation: chatFadeInUp 0.5s ease-out 0.5s both;
+    }
+  </style>
+</head>
+<body>
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <div class="container">
+    <div class="logo">
+      <img src="../../assets/logo.png" alt="PingoAI Logo">
+      <!-- Window Controls -->
+      <div class="logo-controls">
+        <button class="titlebar-btn minimize" id="minimizeBtnInline" aria-label="Minimize">−</button>
+        <button class="titlebar-btn close" id="closeBtnInline" aria-label="Close">×</button>
+      </div>
+    </div>
+
+    <div class="step-indicator">
+      <div class="step-dots">
+        <div class="dot active"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+    </div>
+
+    <div class="step-content">
+    <!-- Step 1: EULA -->
+    <div class="step active" data-step="1">
+      <h2 data-en="Welcome to PingoAI" data-id="Selamat Datang di PingoAI">Welcome to PingoAI</h2>
+      <p data-en="Thank you for installing PingoAI. Please read and accept the End-User License Agreement (EULA) to continue." data-id="Terima kasih telah menginstal PingoAI. Harap baca dan terima persyaratan penggunaan (EULA) untuk melanjutkan.">Thank you for installing PingoAI. Please read and accept the End-User License Agreement (EULA) to continue.</p>
+      
+      <div class="eula-text" id="eulaContent">
+        <!-- Paste your EULA content from MS Word here -->
+        <!-- Support for: bold (<strong>), italic (<em>), numbered list (<ol><li>), bullet points (<ul><li>), paragraphs (<p>) -->
+        
+        <h3>End-User License Agreement (EULA)</h3>
+
+        <div class="eula-section">
+          <p>BY INSTALLING, COPYING, OR USING THIS SOFTWARE, YOU AGREE TO BE BOUND BY THE TERMS OF THIS END USER LICENSE AGREEMENT This Agreement is effective upon first installation or use of the Software</p>
+
+          <h4>Parties</h4>
+          <p>(1) Pingo, a company organized and existing under the laws of Indonesia (hereinafter referred to as "Licensor" or "Company");</p>
+          <p>(2) Any individual or entity who installs, copies, or uses the Software (hereinafter referred to as "Licensee" or "End User").</p>
+          <p>The Licensor and Licensee may be referred to individually as a "Party" and collectively as the "Parties."</p>
+
+          <h4>Background</h4>
+          <p>(A) Licensor has developed, owns, and licenses certain proprietary software known as "PingoAI" (the "Software"), including all related documentation, materials, and intellectual property rights therein.</p>
+          <p>(B) Licensor desires to grant Licensee a limited, non-exclusive license to use the Software in accordance with the terms and conditions set forth in this Agreement.</p>
+          <p>(C) Licensee wishes to obtain a license to use the Software for personal, educational, or commercial use subject to the terms and restrictions contained herein.</p>
+          <p>(D) The parties wish to establish their respective rights and obligations with respect to the licensing, use, and protection of the Software and related intellectual property.</p>
+          <p>(E) THIS SOFTWARE IS PROVIDED FREE OF CHARGE and Licensor has no obligation to provide technical support, maintenance, updates, or any other services in connection with the Software.</p>
+          <p>(F) Licensor reserves the right to discontinue the Software or related services at any time without prior notice or liability to Licensee.</p>
+          <p>(G) NO REFUND POLICY: Since this Software is provided free of charge, no refunds, credits, or monetary compensation of any kind shall be available under any circumstances.</p>
+          <p>(H) This Agreement shall govern the relationship between the parties regarding Licensee's use of the Software and supersedes any prior understandings or agreements relating to such use.</p>
+        </div>
+
+
+        <div class="eula-section">
+          <h4>1. Definitions</h4>
+          <p><strong>1.1.</strong> Affiliate means, with respect to any entity, any other entity that directly or indirectly controls, is controlled by, or is under common control with such entity.</p>
+          <p><strong>1.2.</strong> Agreement means this End User License Agreement, including all amendments, modifications, and supplements hereto.</p>
+          <p><strong>1.3.</strong> Confidential Information means any proprietary or confidential information disclosed by one Party to the other, including but not limited to technical data, trade secrets, know-how, research, product plans, products, services, customers, customer lists, markets, software, developments, inventions, processes, formulas, technology, designs, drawings, engineering, hardware configuration information, marketing, finances, or other business information.</p>
+          <p><strong>1.4.</strong> Documentation means all user manuals, technical manuals, and any other materials provided by Licensor, in printed, electronic, or other form, that describe the installation, operation, use, or technical specifications of the Software.</p>
+          <p><strong>1.5.</strong> Effective Date means the date of first installation or use of the Software.</p>
+          <p><strong>1.6.</strong> End User or Licensee means the individual or entity that has agreed to the terms of this Agreement and is authorized to use the Software.</p>
+          <p><strong>1.7.</strong> Intellectual Property Rights means all intellectual property rights worldwide, including but not limited to: (a) patents, patent applications, patent disclosures, and inventions; (b) trademarks, service marks, trade names, and trade dress; (c) copyrights and copyrightable works; (d) trade secrets, know-how, and other confidential information; and (e) all other intellectual property and proprietary rights.</p>
+          <p><strong>1.8.</strong> License means the limited, non-exclusive, non-transferable right to use the Software granted to Licensee under this Agreement.</p>
+          <p><strong>1.9.</strong> Licensor or Company means Pingo and its successors and assigns.</p>
+          <p><strong>1.10.</strong> Personal Data means any information relating to an identified or identifiable natural person.</p>
+          <p><strong>1.11.</strong> Software means the computer software program(s) known as "PingoAI" in object code form, including all updates, upgrades, patches, fixes, and new versions provided by Licensor, together with all Documentation.</p>
+          <p><strong>1.12.</strong> Term means the duration of this Agreement as specified in the Term and Termination section.</p>
+          <p><strong>1.13.</strong> Third Party means any individual or entity other than Licensor or Licensee.</p>
+          <p><strong>1.14.</strong> Update means any bug fix, patch, minor enhancement, or other modification to the Software that does not constitute a new version or upgrade.</p>
+          <p><strong>1.15.</strong> Upgrade means a new version of the Software that includes significant new features or functionality.</p>
+          <p><strong>1.16.</strong> User Data means all data, information, and content provided, uploaded, or generated by Licensee or its users in connection with the use of the Software.</p>
+        </div>
+
+        <div class="eula-section">
+          <h4>2. Open Source Code</h4>
+          <p><strong>2.1.</strong> Source Code Availability. The source code for this Software is publicly available and distributed under an open source license (MIT or Apache 2.0).</p>
+          <p><strong>2.2.</strong> Personal Use Rights. Users may view, study, and modify the source code for personal, educational, or internal business purposes.</p>
+          <p><strong>2.3.</strong> Redistribution Requirements. Any redistribution of the Software or derivative works must maintain all original copyright notices, attribution statements, and license information.</p>
+          <p><strong>2.4.</strong> Attribution Requirement. Users may not claim original authorship of the Software and must provide appropriate credit to Pingo as the original creator.</p>
+          <p><strong>2.5.</strong> Commercial Use. Commercial use of the Software is permitted provided that proper attribution is maintained and this Agreement is complied with.</p>
+          <p><strong>2.6.</strong> Derivative Works. Any derivative works created from the Software must acknowledge the original source and may not misrepresent the relationship to the original Software.</p>
+
+          <h5>Grant of License</h5>
+          <p><strong>2.3. Grant of License</strong></p>
+          <p><strong>2.1.3.1.</strong> Subject to the terms and conditions of this Agreement, Licensor hereby grants to Licensee a limited, non-exclusive, non-transferable, revocable license to use the Software solely for Licensee's internal business purposes or personal use, as applicable.</p>
+          <p><strong>2.2.3.2.</strong> The license granted herein is limited to the number of users, devices, or installations specified in the applicable license documentation or purchase order.</p>
+          <p><strong>2.3.3.3.</strong> Licensee may install and use the Software only on computers or devices owned or controlled by Licensee and may not permit access to the Software by any third parties except as expressly permitted in this Agreement.</p>
+          <p><strong>2.4.3.4.</strong> This license does not grant Licensee any rights to the source code of the Software, and Licensee shall not attempt to reverse engineer, decompile, disassemble, or otherwise derive the source code from the Software.</p>
+          <p><strong>2.5.3.5.</strong> Licensee may make one backup copy of the Software solely for archival purposes, provided that all copyright and proprietary notices are reproduced on such backup copy.</p>
+          <p><strong>2.6.3.6.</strong> The license granted hereunder is personal to Licensee and may not be assigned, sublicensed, or transferred to any third party without the prior written consent of Licensor.</p>
+          <p><strong>2.7.3.7.</strong> All rights not expressly granted to Licensee under this Agreement are reserved by Licensor.</p>
+        </div>
+
+        <div class="eula-section">
+          <h4>3. Permitted Uses</h4>
+          <p><strong>3.1.4.1.</strong> General License Grant. Subject to the terms and conditions of this Agreement, Licensor grants Licensee a non-exclusive, non-transferable, revocable license to install and use the Software solely for Licensee's internal business purposes or personal use, as applicable.</p>
+          <p><strong>3.2.4.2.</strong> Installation Rights. Licensee may install the Software on computers and devices owned or controlled by Licensee, provided that the number of installations does not exceed the number of licenses purchased or the limitations specified in the applicable license type.</p>
+          <p><strong>3.3.4.3.</strong> Authorized Users. Licensee may permit its employees, contractors, and agents to access and use the Software solely in connection with Licensee's permitted use, provided that such individuals agree to be bound by the terms of this Agreement.</p>
+          <p><strong>3.4.4.4.</strong> Backup Copies. Licensee may make a reasonable number of backup copies of the Software solely for archival purposes and disaster recovery, provided that all copyright notices and proprietary markings are reproduced on such copies.</p>
+          <p><strong>3.5.4.5.</strong> Documentation Use. Licensee may use, copy, and distribute the Documentation solely in connection with Licensee's authorized use of the Software and solely for training and reference purposes.</p>
+          <p><strong>3.6.4.6.</strong> Network Use. Where specifically permitted by the license type, Licensee may install the Software on a network server for access by multiple users, subject to any concurrent user limitations or seat restrictions specified in the applicable license terms.</p>
+          <p><strong>3.7.4.7.</strong> Geographic Restrictions. Licensee's use of the Software is limited to the geographic territories specified in the license documentation or, if not specified, to the territory where Licensee is located.</p>
+          <p><strong>3.8.4.8.</strong> Compliance with License Type. Licensee's use of the Software must comply with the specific terms, limitations, and restrictions of the applicable license type purchased, including but not limited to user count, device count, or usage volume restrictions.</p>
+        </div>
+
+        <div class="eula-section">
+          <h4>4. Prohibited Uses</h4>
+          <p><strong>4.1.5.1.</strong> Licensee shall not, and shall not permit any third party to, reverse engineer, disassemble, decompile, or otherwise attempt to derive the source code of the Software, except to the extent expressly permitted by applicable law.</p>
+          <p><strong>4.2.5.2.</strong> Licensee shall not modify, adapt, alter, translate, or create derivative works based on the Software or any portion thereof.</p>
+          <p><strong>4.3.5.3.</strong> Licensee shall not distribute, sublicense, lease, rent, loan, or otherwise transfer the Software or any rights granted hereunder to any third party without Licensor's prior written consent.</p>
+          <p><strong>4.4.5.4.</strong> Licensee shall not remove, alter, or obscure any proprietary notices, labels, or marks on the Software or Documentation.</p>
+          <p><strong>4.5.5.5.</strong> Licensee shall not use the Software for any unlawful purpose, including but not limited to creating malware, conducting unauthorized network intrusions, facilitating cybercrime, or any activities that violate applicable laws, regulations, or third-party rights.</p>
+          <p><strong>4.6.5.6.</strong> Licensee shall not use the Software to develop, create, or distribute any software or application that competes with the Software or Licensor's business.</p>
+          <p><strong>4.7.5.7.</strong> Licensee shall not attempt to circumvent, disable, or interfere with any security features, license management systems, or usage monitoring mechanisms within the Software.</p>
+          <p><strong>4.8.5.8.</strong> Licensee shall not use the Software in any manner that could damage, disable, overburden, or impair Licensor's servers, networks, or services.</p>
+          <p><strong>4.9.5.9.</strong> Licensee shall not access or use the Software beyond the scope of the license granted in Section 3 or in excess of any usage limitations specified in this Agreement.</p>
+
+          <p><strong>5.10.</strong> Anti-Malicious Use. Licensee shall not use the Software to develop, distribute, or facilitate malicious software, conduct hacking activities, compromise computer systems or networks, or engage in any activities that could harm individuals, organizations, or computer systems.</p>
+          <p><strong>5.11.</strong> Termination for Misuse. Licensor reserves the right to terminate Licensee's access to the Software immediately if Licensor becomes aware of any misuse that violates this Section 4.</p>
+        </div>
+
+        <div class="eula-section">
+          <h4>5. Intellectual Property Rights</h4>
+          <p><strong>5.1.6.1.</strong> Ownership. Licensor retains all right, title, and interest in and to the Software, Documentation, and all Intellectual Property Rights embodied therein or related thereto.</p>
+          <p><strong>5.2.6.2.</strong> No Transfer of Rights. This Agreement does not transfer to Licensee any ownership rights in the Software or Documentation, and Licensee acknowledges that it receives only a limited license to use the Software as expressly set forth herein.</p>
+          <p><strong>5.3.6.3.</strong> Licensee Acknowledgment. Licensee acknowledges and agrees that the Software contains valuable trade secrets, copyrighted material, and other proprietary information of Licensor and its licensors.</p>
+          <p><strong>5.4.6.4.</strong> Reservation of Rights. All rights not expressly granted to Licensee under this Agreement are reserved by Licensor.</p>
+          <p><strong>5.5.6.5.</strong> Third Party Components. The Software may include third-party software components subject to separate license terms, which terms are incorporated herein by reference and shall govern the use of such components.</p>
+          <p><strong>5.6.6.6.</strong> Derivative Works. Licensee shall not create any derivative works based on the Software without Licensor's prior written consent.</p>
+          <p><strong>5.7.6.7.</strong> Copyright Notices. Licensee shall not remove, alter, or obscure any copyright, trademark, or other proprietary notices contained in or on the Software or Documentation.</p>
+        </div>
+
+        <div class="eula-section">
+          <h4>6. Installation and System Requirements</h4>
+          <p><strong>6.1.7.1.</strong> System Requirements. Licensee shall ensure that all systems on which the Software is installed meet or exceed the minimum system requirements specified in the Documentation or as otherwise communicated by Licensor.</p>
+          <p><strong>6.2.7.2.</strong> Installation Rights. Licensee may install the Software only on the number of devices or systems expressly permitted under this Agreement and only in accordance with the installation procedures provided by Licensor.</p>
+          <p><strong>6.3.7.3.</strong> Installation Responsibility. Licensee is solely responsible for the proper installation, configuration, and operation of the Software on Licensee's systems.</p>
+          <p><strong>6.4.7.4.</strong> System Compatibility. Licensor makes no warranty that the Software will be compatible with all hardware configurations, operating systems, or third-party software that Licensee may use.</p>
+          <p><strong>6.5.7.5.</strong> Installation Support. Any installation support provided by Licensor shall be at Licensor's sole discretion and may be subject to additional fees.</p>
+          <p><strong>6.6.7.6.</strong> Backup and Recovery. Licensee is responsible for backing up all data and systems prior to installation and for implementing appropriate data recovery procedures.</p>
+          <p><strong>6.7.7.7.</strong> Network and Security Requirements. If the Software requires network connectivity, Licensee shall maintain appropriate network security measures and comply with any security requirements specified by Licensor.</p>
+        </div>
+
+        <div class="eula-section">
+          <h4>7. Updates and Maintenance</h4>
+          <p><strong>7.1.8.1.</strong> Updates and Upgrades. Licensor may, in its sole discretion, develop and make available Updates and Upgrades to the Software from time to time.</p>
+          <p><strong>7.2.8.2.</strong> No Obligation to Provide Updates. Licensor has no obligation to provide any Updates, Upgrades, maintenance, support, or other services in connection with the Software under this Agreement.</p>
+          <p><strong>7.3.8.3.</strong> Automatic Updates. Licensee acknowledges and agrees that the Software may automatically download and install Updates without prior notice to Licensee, provided that such Updates do not materially reduce the functionality of the Software.</p>
+          <p><strong>7.4.8.4.</strong> Terms Applicable to Updates. Any Updates or Upgrades provided by Licensor shall be deemed part of the Software and subject to all terms and conditions of this Agreement, unless accompanied by separate license terms.</p>
+          <p><strong>7.5.8.5.</strong> Compatibility. Licensor makes no warranty that any Update or Upgrade will be compatible with Licensee's system configuration or that continued use of previous versions will be supported after an Update or Upgrade is released.</p>
+          <p><strong>7.6.8.6.</strong> Discontinuation. Licensor may discontinue support for any version of the Software at any time upon thirty (30) days' written notice to Licensee.</p>
+        </div>
+
+        <div class="eula-section">
+          <h4>8. User Data and Privacy</h4>
+          <p><strong>8.1.9.1.</strong> Minimal Data Collection. Licensee acknowledges that the Software is designed to collect minimal data and may collect, process, and transmit only essential technical information and basic analytics during installation, operation, and use of the Software.</p>
+          <p><strong>8.2.9.2.</strong> Types of Data Collected. The Software may collect the following categories of information:</p>
+          <ol>
+            <li>(a) Technical data including system configuration, hardware specifications, operating system information, and Software performance metrics.</li>
+            <li>(b) Usage data including feature utilization, error reports, crash logs, and session duration.</li>
+            <li>(c) User Content Ownership. User-generated content, files, and data processed through the Software remain the exclusive property of the User. Licensor does not claim ownership of, store permanently, or retain rights to User content.</li>
+          </ol>
+          <p><strong>8.3.9.3.</strong> Purpose of Data Collection. Licensor collects User Data solely for the following purposes:</p>
+          <ol>
+            <li>(a) To provide, maintain, and improve the Software and related services.</li>
+            <li>(b) To diagnose and resolve technical issues and provide customer support.</li>
+            <li>(c) To develop updates, enhancements, and new features for the Software.</li>
+          </ol>
+          <p><strong>8.4.9.4.</strong> Data Security. Licensor shall implement reasonable technical and organizational measures to protect User Data against unauthorized access, disclosure, alteration, or destruction.</p>
+          <p><strong>8.5.9.5.</strong> Data Sharing. Licensor will not sell, rent, or trade User Data to third parties. Licensor may share User Data only:</p>
+          <ol>
+            <li>(a) With service providers who assist in Software operations under confidentiality obligations.</li>
+            <li>(b) When required by applicable law or legal process.</li>
+            <li>(c) To protect Licensor's rights or prevent harm to persons or property.</li>
+          </ol>
+          <p><strong>8.6.9.6.</strong> Data Retention. Licensor will retain User Data only for as long as necessary to fulfill the purposes described in this Agreement or as required by applicable law.</p>
+          <p><strong>8.7.9.7.</strong> User Rights. Subject to applicable law, Licensee may request access to, correction of, or deletion of Personal Data by contacting Licensor at the address specified in this Agreement.</p>
+          <p><strong>8.8.9.8.</strong> Privacy Policy. Licensor's current privacy policy, available at https://pingo.ai/privacy, is incorporated by reference and governs the collection and use of Personal Data in conjunction with this Agreement.</p>
+          <p><strong>8.9.9.9.</strong> Consent. By using the Software, Licensee consents to the collection, use, and processing of User Data as described in this Section and the Privacy Policy.</p>
+        </div>
+
+        <div class="eula-section">
+          <h4>9. International Data Protection Compliance & Warranties</h4>
+          <p><strong>9.10.</strong> International Data Protection Compliance. Licensor is committed to compliance with applicable international data protection laws, including the General Data Protection Regulation (GDPR), California Consumer Privacy Act (CCPA), and Indonesian Personal Data Protection Law (UU PDP).</p>
+          <p><strong>9.11.</strong> No Permanent Data Storage. Unless explicitly stated otherwise, the Software does not permanently store, backup, or retain User files, content, or personal information on Licensor's servers.</p>
+
+          <h5>Warranty Disclaimers</h5>
+          <p><strong>9.10. Warranty Disclaimers</strong></p>
+          <p><strong>9.1.10.1.</strong> Disclaimer of Warranties. GIVEN THE FREE NATURE OF THIS SOFTWARE, TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE SOFTWARE AND DOCUMENTATION ARE PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE. LICENSOR PROVIDES ABSOLUTELY NO WARRANTIES AND USERS ASSUME ALL RISKS ASSOCIATED WITH USE OF THE SOFTWARE.</p>
+          <p><strong>9.2.10.2.</strong> Specific Disclaimers. LICENSOR SPECIFICALLY DISCLAIMS ALL IMPLIED WARRANTIES, INCLUDING WITHOUT LIMITATION THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, TITLE, QUIET ENJOYMENT, AND ANY WARRANTIES ARISING FROM COURSE OF DEALING OR USAGE OF TRADE.</p>
+          <p><strong>9.3.10.3.</strong> No Guarantee of Performance. LICENSOR DOES NOT WARRANT THAT THE SOFTWARE WILL MEET LICENSEE'S REQUIREMENTS, OPERATE WITHOUT INTERRUPTION, BE ERROR-FREE, OR THAT ALL DEFECTS WILL BE CORRECTED.</p>
+          <p><strong>9.4.10.4.</strong> Third-Party Components. Any third-party software, services, or components included with or accessed through the Software are provided "as is" and any express or implied warranties are disclaimed by Licensor.</p>
+          <p><strong>9.5.10.5.</strong> Beta and Pre-Release Software. If the Software is designated as beta, pre-release, or similar developmental version, Licensee acknowledges that the Software may contain bugs, errors, and may not function properly, and all warranties are expressly disclaimed.</p>
+          <p><strong>9.6.10.6.</strong> Internet and Network Dependencies. Licensor makes no warranties regarding the availability, reliability, or performance of internet connections, networks, or third-party services required for the Software's operation.</p>
+          <p><strong>9.7.10.7.</strong> Jurisdictional Limitations. Some jurisdictions do not allow the exclusion of implied warranties, so the above exclusions may not apply to Licensee to the extent prohibited by applicable law.</p>
+
+          <p><strong>10.8.</strong> Use at Your Own Risk. LICENSEE ACKNOWLEDGES AND AGREES THAT USE OF THIS FREE SOFTWARE IS ENTIRELY AT LICENSEE'S OWN RISK AND THAT LICENSOR SHALL HAVE NO LIABILITY FOR ANY DAMAGES, LOSSES, OR ISSUES ARISING FROM SUCH USE.</p>
+        </div>
+
+        <div class="eula-section">
+          <h4>10. Limitation of Liability</h4>
+          <p><strong>10.11.</strong> Limitation of Liability</p>
+          <p><strong>10.1.11.1.</strong> Disclaimer of Consequential Damages. TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL EITHER PARTY BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, LOSS OF DATA, LOSS OF USE, LOSS OF GOODWILL, OR BUSINESS INTERRUPTION, HOWEVER CAUSED AND REGARDLESS OF THE THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THIS AGREEMENT OR THE USE OF OR INABILITY TO USE THE SOFTWARE, EVEN IF SUCH PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.</p>
+          <p><strong>10.2.11.2.</strong> Cap on Direct Damages. EXCEPT FOR BREACHES OF CONFIDENTIALITY OBLIGATIONS OR INTELLECTUAL PROPERTY INFRINGEMENT, THE TOTAL LIABILITY OF EACH PARTY FOR ALL DAMAGES, LOSSES, AND CAUSES OF ACTION ARISING OUT OF OR RELATING TO THIS AGREEMENT SHALL NOT EXCEED ONE HUNDRED U.S. DOLLARS ($100) OR THE EQUIVALENT AMOUNT IN THE APPLICABLE CURRENCY.</p>
+          <p><strong>10.3.11.3.</strong> Essential Purpose. THE PARTIES ACKNOWLEDGE THAT THE LIMITATIONS OF LIABILITY SET FORTH IN THIS SECTION 10 ARE AN ESSENTIAL ELEMENT OF THE BASIS OF THE BARGAIN BETWEEN THE PARTIES AND THAT LICENSOR WOULD NOT ENTER INTO THIS AGREEMENT WITHOUT SUCH LIMITATIONS.</p>
+          <p><strong>10.4.11.4.</strong> Allocation of Risk. THE LIMITATIONS OF LIABILITY IN THIS SECTION 10 SHALL APPLY EVEN IF ANY LIMITED REMEDY FAILS OF ITS ESSENTIAL PURPOSE.</p>
+          <p><strong>10.5.11.5.</strong> Exceptions. The limitations set forth in this Section 10 shall not apply to:</p>
+          <ol>
+            <li>(a) Death or personal injury caused by negligence;</li>
+            <li>(b) Fraud or fraudulent misrepresentation;</li>
+            <li>(c) Willful misconduct or gross negligence;</li>
+            <li>(d) Violations of applicable law that cannot be limited by contract.</li>
+          </ol>
+        </div>
+
+        <div class="eula-section">
+          <h4>11. Indemnification</h4>
+          <p><strong>11.12.</strong> Indemnification</p>
+          <p><strong>11.1.12.1.</strong> Licensee Indemnification. Licensee shall defend, indemnify, and hold harmless Licensor and its officers, directors, employees, agents, and affiliates from and against any and all third-party claims, demands, suits, proceedings, losses, damages, costs, and expenses (including reasonable attorneys' fees) arising out of or relating to: (i) Licensee's use of the Software in violation of this Agreement; (ii) Licensee's modification of the Software; (iii) Licensee's combination of the Software with other software, hardware, or services not provided by Licensor; or (iv) any content, data, or materials provided by Licensee in connection with the Software.</p>
+          <p><strong>11.2.12.2.</strong> Licensor Indemnification. Licensor shall defend, indemnify, and hold harmless Licensee from and against any third-party claims that the Software, when used in accordance with this Agreement, infringes any patent, copyright, or trademark of such third party, provided that Licensee: (i) promptly notifies Licensor in writing of such claim; (ii) grants Licensor sole control of the defense and settlement of such claim; and (iii) provides reasonable cooperation in the defense of such claim.</p>
+          <p><strong>11.3.12.3.</strong> Licensor Remedies. If the Software becomes, or in Licensor's opinion is likely to become the subject of an infringement claim under Section 11.2, Licensor may, at its option and expense: (i) procure for Licensee the right to continue using the Software; (ii) replace or modify the Software to make it non-infringing; or (iii) terminate this Agreement and refund any prepaid fees for the unused portion of the Term.</p>
+          <p><strong>11.4.12.4.</strong> Exclusions. Licensor's indemnification obligations under Section 11.2 shall not apply to claims arising from: (i) modifications to the Software not made by Licensor; (ii) use of the Software in combination with products, services, or technology not provided by Licensor; (iii) use of the Software other than in accordance with this Agreement or the Documentation; or (iv) continued use of the Software after Licensor has provided a non-infringing alternative.</p>
+          <p><strong>11.5.12.5.</strong> Indemnification Procedures. The indemnifying party's obligations under this Section 11 are conditioned upon the indemnified party: (i) providing prompt written notice of any claim; (ii) granting the indemnifying party sole control of the defense and settlement; and (iii) providing reasonable cooperation at the indemnifying party's expense.</p>
+          <p><strong>11.6.12.6.</strong> Sole Remedy. The indemnification provisions in this Section 11 constitute the sole and exclusive remedy of either party for third-party intellectual property infringement claims.</p>
+        </div>
+
+        <div class="eula-section">
+          <h4>12. Term and Termination</h4>
+          <p><strong>12.1.13.1.</strong> Term. This Agreement shall commence on the Effective Date and shall continue in effect until terminated in accordance with the provisions herein.</p>
+          <p><strong>12.2.13.2.</strong> Termination by Licensee. Licensee may terminate this Agreement at any time by providing thirty (30) days' written notice to Licensor and ceasing all use of the Software.</p>
+          <p><strong>12.3.13.3.</strong> Termination by Licensor. Licensor may terminate this Agreement immediately upon written notice to Licensee if Licensee materially breaches any provision of this Agreement and fails to cure such breach within thirty (30) days after receiving written notice thereof.</p>
+          <p><strong>12.4.13.4.</strong> Automatic Termination. This Agreement shall automatically terminate without notice if Licensee becomes insolvent, makes an assignment for the benefit of creditors, or becomes subject to any bankruptcy or insolvency proceedings.</p>
+          <p><strong>12.5.13.5.</strong> Effect of Termination. Upon termination of this Agreement for any reason:</p>
+          <ol>
+            <li>(a) All rights and licenses granted to Licensee hereunder shall immediately cease and terminate.</li>
+            <li>(b) Licensee shall immediately discontinue all use of the Software and Documentation.</li>
+            <li>(c) Licensee shall destroy or return to Licensor all copies of the Software and Documentation in Licensee's possession or control.</li>
+            <li>(d) Licensee shall provide written certification to Licensor within ten (10) days of termination confirming compliance with the obligations set forth in this Section 12.5.</li>
+          </ol>
+          <p><strong>12.6.13.6.</strong> Survival. The provisions of Sections 1 (Definitions), 5 (Intellectual Property Rights), 8 (User Data and Privacy), 9 (Warranty Disclaimers), 10 (Limitation of Liability), 11 (Indemnification), 15 (Governing Law and Jurisdiction), and this Section 12.6 shall survive any termination or expiration of this Agreement.</p>
+        </div>
+
+        <div class="eula-section">
+          <h4>13. Compliance with Laws</h4>
+          <p><strong>13.1.14.1.</strong> General Compliance. Each party shall comply with all applicable federal, state, local, and foreign laws, regulations, rules, ordinances, and other governmental requirements in connection with its performance under this Agreement.</p>
+          <p><strong>13.2.14.2.</strong> Licensee Compliance Obligations. Licensee shall ensure that its use of the Software complies with all applicable laws and regulations, including but not limited to data protection, privacy, cybersecurity, and industry-specific regulatory requirements.</p>
+          <p><strong>13.3.14.3.</strong> Prohibited Activities. Licensee shall not use the Software for any unlawful purpose or in any manner that violates applicable laws or regulations, including without limitation laws relating to money laundering, terrorism financing, sanctions, or other criminal activities.</p>
+          <p><strong>13.4.14.4.</strong> Data Protection Laws. To the extent Licensee processes personal data using the Software, Licensee shall comply with all applicable data protection and privacy laws, including but not limited to the General Data Protection Regulation (GDPR), California Consumer Privacy Act (CCPA), and other similar regulations.</p>
+          <p><strong>13.5.14.5.</strong> Industry Regulations. If Licensee operates in a regulated industry, Licensee acknowledges that it is solely responsible for ensuring that its use of the Software complies with all applicable industry-specific laws and regulations.</p>
+          <p><strong>13.6.14.6.</strong> Cooperation with Authorities. Each party shall reasonably cooperate with lawful requests from governmental authorities and regulatory bodies in connection with this Agreement and the Software.</p>
+          <p><strong>13.7.14.7.</strong> Notice of Violations. Each party shall promptly notify the other party in writing of any known material violation of applicable laws relating to this Agreement or the Software.</p>
+        </div>
+
+        <div class="eula-section">
+          <h4>14. Export Controls</h4>
+          <p><strong>14.1.15.1.</strong> Licensee acknowledges that the Software and Documentation may be subject to export controls under the laws and regulations of Indonesia and other applicable jurisdictions, including any relevant trade control regulations.</p>
+          <p><strong>14.2.15.2.</strong> Licensee agrees not to export, re-export, or transfer the Software or Documentation, directly or indirectly, to any country, entity, or person prohibited under applicable export control laws and regulations.</p>
+          <p><strong>14.3.15.3.</strong> Licensee shall not use the Software or Documentation in any manner that would violate applicable export control laws, including but not limited to:</p>
+          <ol>
+            <li>(a) Export or re-export to countries subject to U.S. economic sanctions or embargoes.</li>
+            <li>(b) Provision to persons or entities listed on restricted party lists, including the Denied Persons List, Entity List, or Specially Designated Nationals List.</li>
+            <li>(c) Use in connection with activities related to nuclear, chemical, or biological weapons or missile technology.</li>
+          </ol>
+          <p><strong>14.4.15.4.</strong> Licensee represents and warrants that neither Licensee nor any End User is located in, organized under the laws of, or ordinarily resident in any country subject to comprehensive Indonesian economic sanctions or international sanctions that apply to Indonesia.</p>
+          <p><strong>14.5.15.5.</strong> Licensee shall obtain all necessary export licenses, permits, or other governmental authorizations required for the use of the Software and Documentation.</p>
+          <p><strong>14.6.15.6.</strong> Licensee agrees to comply with all applicable import regulations in the jurisdiction where the Software will be used.</p>
+          <p><strong>14.7.15.7.</strong> Licensor reserves the right to suspend or terminate this Agreement immediately if Licensor reasonably believes that Licensee's use of the Software violates applicable export control laws.</p>
+        </div>
+
+        <div class="eula-section">
+          <h4>15. Governing Law and Jurisdiction</h4>
+          <p><strong>15.1.16.1.</strong> Indonesian Users. For users located in Indonesia, this Agreement shall be governed by and construed in accordance with the laws of the Republic of Indonesia, without regard to its conflict of laws principles.</p>
+          <p><strong>15.2.16.2.</strong> Indonesian Jurisdiction. For users located in Indonesia, any dispute, controversy, or claim arising out of or relating to this Agreement shall be subject to the exclusive jurisdiction of the District Court of Central Jakarta, Republic of Indonesia.</p>
+          <p><strong>15.3.16.3.</strong> Each party hereby irrevocably consents to the jurisdiction of such courts and waives any objection to venue in such courts on the grounds of inconvenient forum or otherwise.</p>
+          <p><strong>15.4.16.4.</strong> International Users. For users located outside Indonesia, disputes may be resolved either: (a) under the laws of the user's jurisdiction of residence, or (b) through binding arbitration under the rules of the Singapore International Arbitration Centre (SIAC), with proceedings conducted in English.</p>
+          <p><strong>15.5.16.5.</strong> This Agreement shall be binding upon and inure to the benefit of the parties hereto and their respective successors and permitted assigns.</p>
+
+          <h5>Alternative Dispute Resolution</h5>
+          <p><strong>16.6.</strong> Before initiating formal legal proceedings, the parties agree to attempt resolution through good faith negotiations for a period of thirty (30) days.</p>
+          <p><strong>16.7.</strong> International Enforceability. This Agreement is designed to be enforceable across multiple jurisdictions while respecting local consumer protection laws that cannot be waived by contract.</p>
+        </div>
+
+        <div class="eula-section">
+          <h4>16. Severability</h4>
+          <p><strong>16.1.17.1.</strong> If any provision of this Agreement is held to be invalid, illegal, or unenforceable by a court of competent jurisdiction, such provision shall be deemed severed from this Agreement and the remaining provisions shall continue in full force and effect.</p>
+          <p><strong>16.2.17.2.</strong> In the event that any severed provision is deemed essential to the purpose or structure of this Agreement, the parties shall negotiate in good faith to replace such provision with a valid and enforceable provision that achieves substantially the same economic and legal effect.</p>
+          <p><strong>16.3.17.3.</strong> The invalidity or unenforceability of any provision in one jurisdiction shall not affect the validity or enforceability of such provision in any other jurisdiction.</p>
+          <p><strong>16.4.17.4.</strong> No failure to enforce any provision of this Agreement shall constitute a waiver of such provision or affect the validity of this Agreement or the right of either party to enforce such provision.</p>
+        </div>
+
+        <div class="eula-section">
+          <h4>17. Entire Agreement</h4>
+          <p><strong>17.1.18.1.</strong> This Agreement, including all schedules, exhibits, and attachments hereto, constitutes the entire agreement between the parties with respect to the subject matter hereof and supersedes all prior and contemporaneous agreements, understandings, negotiations, and discussions, whether oral or written, between the parties relating to such subject matter.</p>
+          <p><strong>17.2.18.2.</strong> No representations, warranties, covenants, or conditions other than those expressly set forth in this Agreement have been made by either party or relied upon by either party in entering into this Agreement.</p>
+          <p><strong>17.3.18.3.</strong> This Agreement may not be explained or supplemented by any prior course of dealings or trade by custom or usage.</p>
+          <p><strong>17.4.18.4.</strong> Any terms or conditions contained in any business form used by either party shall be of no force and effect and shall not modify the terms of this Agreement.</p>
+        </div>
+
+        <div class="eula-section">
+          <h4>18. Modifications</h4>
+          <p><strong>18.1.19.1.</strong> This Agreement may only be modified, amended, or supplemented by a written instrument signed by both parties.</p>
+          <p><strong>18.2.19.2.</strong> No oral modifications, amendments, or waivers of any provision of this Agreement shall be effective or binding upon either party.</p>
+          <p><strong>18.3.19.3.</strong> Licensor may modify the terms of this Agreement for future versions or updates of the Software by providing Licensee with thirty (30) days' prior written notice of such modifications.</p>
+          <p><strong>18.4.19.4.</strong> Licensee's continued use of the Software after the effective date of any modification shall constitute acceptance of the modified terms.</p>
+          <p><strong>18.5.19.5.</strong> If Licensee does not agree to any modification, Licensee's sole remedy shall be to terminate this Agreement in accordance with Section 12 and discontinue use of the Software.</p>
+          <p><strong>18.6.19.6.</strong> Any waiver of a provision of this Agreement must be in writing and signed by the party against whom the waiver is to be effective.</p>
+          <p><strong>18.7.19.7.</strong> No failure or delay by either party in exercising any right, power, or privilege under this Agreement shall operate as a waiver thereof.</p>
+        </div>
+
+        <div class="eula-section">
+          <p>Date: [DATE]</p>
+          <p>[END USER/LICENSEE]:</p>
+          <p>By: _________________________________</p>
+          <p>Name: [NAME]</p>
+          <p>Title: [TITLE]</p>
+          <p>Date: [DATE]</p>
+
+          <!-- You can paste more content here from MS Word -->
+        </div>
+      </div>
+
+      <label>
+        <input type="checkbox" id="eulaCheckbox">
+        <span data-en="I have read and agree to the EULA" data-id="Saya telah membaca dan menyetujui EULA">I have read and agree to the EULA</span>
+      </label>
+    </div>
+
+    <!-- Step 2: Appearance & Language -->
+    <div class="step" data-step="2">
+      <h2 data-en="Appearance & Language" data-id="Tampilan & Bahasa">Appearance & Language</h2>
+      <p data-en="Choose the display theme and interface language you prefer." data-id="Pilih tema tampilan dan bahasa antarmuka yang Anda inginkan.">Choose the display theme and interface language you prefer.</p>
+
+      <div class="form-group">
+        <strong style="display:block; margin-bottom:8px;" data-en="Display Theme" data-id="Tema Tampilan">Display Theme</strong>
+        <div class="theme-cards">
+          <!-- Light Theme Card -->
+          <label class="theme-card" data-theme="light">
+            <input type="radio" name="themeChoice" value="light" checked>
+            <div class="theme-preview light">
+              <div class="theme-preview-window">
+                <div class="window-dot"></div>
+                <div class="window-dot"></div>
+                <div class="window-dot"></div>
+              </div>
+              <div class="theme-preview-content">
+                <div class="theme-preview-bar"></div>
+                <div class="theme-preview-bar"></div>
+                <div class="theme-preview-bar"></div>
+              </div>
+            </div>
+            <div class="theme-card-label">Light</div>
+          </label>
+
+          <!-- Dark Theme Card -->
+          <label class="theme-card" data-theme="dark">
+            <input type="radio" name="themeChoice" value="dark">
+            <div class="theme-preview dark">
+              <div class="theme-preview-window">
+                <div class="window-dot"></div>
+                <div class="window-dot"></div>
+                <div class="window-dot"></div>
+              </div>
+              <div class="theme-preview-content">
+                <div class="theme-preview-bar"></div>
+                <div class="theme-preview-bar"></div>
+                <div class="theme-preview-bar"></div>
+              </div>
+            </div>
+            <div class="theme-card-label">Dark</div>
+          </label>
+
+          <!-- System Theme Card -->
+          <label class="theme-card" data-theme="system">
+            <input type="radio" name="themeChoice" value="system">
+            <div class="theme-preview system">
+              <div class="theme-preview-half light">
+                <div class="theme-preview-window">
+                  <div class="window-dot"></div>
+                  <div class="window-dot"></div>
+                  <div class="window-dot"></div>
+                </div>
+                <div class="theme-preview-content">
+                  <div class="theme-preview-bar"></div>
+                  <div class="theme-preview-bar"></div>
+                </div>
+              </div>
+              <div class="theme-preview-half dark">
+                <div class="theme-preview-window">
+                  <div class="window-dot"></div>
+                  <div class="window-dot"></div>
+                  <div class="window-dot"></div>
+                </div>
+                <div class="theme-preview-content">
+                  <div class="theme-preview-bar"></div>
+                  <div class="theme-preview-bar"></div>
+                </div>
+              </div>
+            </div>
+            <div class="theme-card-label">System</div>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <strong style="display:block; margin-bottom:8px;" data-en="Interface Language" data-id="Bahasa Antarmuka">Interface Language</strong>
+        <div class="radio-inline">
+          <label><input type="radio" name="langChoice" value="en" checked>English</label>
+          <label><input type="radio" name="langChoice" value="id">Bahasa Indonesia</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Integration -->
+    <div class="step" data-step="3">
+      <h2 data-en="Provider Connection" data-id="Sambungan Penyedia">Provider Connection</h2>
+      <p data-en="Choose how you want to connect to AI services." data-id="Pilih cara Anda ingin terhubung dengan layanan AI.">Choose how you want to connect to AI services.</p>
+
+      <div class="form-group">
+        <div class="radio-group">
+          <label>
+            <input type="radio" name="integrationChoice" id="integrationFree" value="free" checked>
+            <span><strong data-en="Free (Limited)" data-id="Gratis (Terbatas)">Free (Limited)</strong> — <span data-en="Use free API from Groq" data-id="Gunakan API gratis dari Groq">Use free API from Groq</span></span>
+          </label>
+          <label>
+            <input type="radio" name="integrationChoice" id="integrationCustom" value="custom">
+            <span><strong data-en="Custom" data-id="Kustom">Custom</strong> — <span data-en="You can input your own API key in settings later" data-id="Anda dapat memasukkan API key sendiri di pengaturan nanti">Enter your own API key in settings later</span></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="integration-preview" id="integrationPreview">
+        <div><strong>🎁 <span data-en="Free (Limited)" data-id="Gratis (Terbatas)">Free (Limited)</span></strong></div>
+        <div style="margin-top:8px;">
+          <div>✓ <span data-en="No need for your own API key" data-id="Tidak perlu API key sendiri">No need for your own API key</span></div>
+          <div>✓ <span data-en="Ready to use immediately" data-id="Langsung dapat digunakan">Ready to use immediately</span></div>
+          <div>✓ Model: openai/gpt-oss-120b</div>
+        </div>
+      </div>
+
+      <!-- Custom API Form -->
+      <div class="custom-api-form" id="customApiForm">
+        <div class="input-group">
+          <label class="input-label" data-en="API Provider" data-id="Penyedia API">API Provider</label>
+          <select id="apiProvider" class="input-field" style="cursor: pointer;">
+            <option value="openai">OpenAI</option>
+            <option value="groq">Groq</option>
+            <option value="custom">Custom / Other</option>
+          </select>
+          <div class="input-helper" data-en="Select your API provider" data-id="Pilih penyedia API Anda">Select your API provider</div>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label" data-en="API URL" data-id="URL API">API URL</label>
+          <input 
+            type="url" 
+            class="input-field" 
+            id="customApiUrl"
+            placeholder="https://api.openai.com/v1/chat/completions"
+            data-en-placeholder="https://api.openai.com/v1/chat/completions"
+            data-id-placeholder="https://api.openai.com/v1/chat/completions"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <div class="input-helper" id="urlHelper" data-en="OpenAI endpoint" data-id="Endpoint OpenAI">OpenAI endpoint</div>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label" data-en="API Key" data-id="API Key">API Key</label>
+          <input 
+            type="text" 
+            class="input-field" 
+            id="customApiKey"
+            placeholder="sk-..."
+            data-en-placeholder="sk-..."
+            data-id-placeholder="sk-..."
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <div class="input-helper" id="keyHelper" data-en="Starts with sk- for OpenAI" data-id="Dimulai dengan sk- untuk OpenAI">Starts with sk- for OpenAI</div>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label" data-en="Model Name" data-id="Nama Model">Model Name</label>
+          <input 
+            type="text" 
+            class="input-field" 
+            id="customModel"
+            placeholder="gpt-4"
+            data-en-placeholder="gpt-4"
+            data-id-placeholder="gpt-4"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <div class="input-helper" id="modelHelper" data-en="e.g., gpt-4, gpt-3.5-turbo" data-id="contoh: gpt-4, gpt-3.5-turbo">e.g., gpt-4, gpt-3.5-turbo</div>
+        </div>
+
+        <button class="btn btn-test" id="testConnectionBtn" data-en="Test Connection" data-id="Test Koneksi">Test Connection</button>
+      </div>
+    </div>
+
+    <!-- Step 4: AI Mode -->
+    <div class="step" data-step="4">
+      <h2 data-en="Your Assistant, Your Style" data-id="Assisten Anda, Gaya Anda">AI Mode</h2>
+      <p data-en="Choose how you want to interact with the AI." data-id="Pilih bagaimana Anda ingin berinteraksi dengan AI.">Choose how you want to interact with the AI.</p>
+
+      <div class="form-group">
+        <div class="mode-cards">
+          <!-- Glance Mode Card -->
+          <label class="mode-card" data-mode="glance">
+            <input type="radio" name="aiModeChoice" value="glance">
+            <div class="mode-card-illustration glance-illustration">
+              <div class="glance-bubble">
+                <img src="../../assets/bubble_ai.png" alt="AI" class="bubble-icon">
+              </div>
+              <div class="glance-lines">
+                <div class="line"></div>
+                <div class="line"></div>
+                <div class="line short"></div>
+              </div>
+            </div>
+            <span class="mode-card-title" data-en="Glance Mode" data-id="Mode Sekilas">Glance Mode</span>
+            <span class="mode-card-desc" data-en="Get quick AI answers based on the information you provide, perfect for when you need fast and concise explanations" data-id="Dapatkan jawaban AI secara ringkas, cocok untuk penjelasan cepat dan instan">Get quick AI answers based on the information you provide, perfect for when you need fast and concise explanations</span>
+          </label>
+
+          <!-- Panel Mode Card -->
+          <label class="mode-card" data-mode="panel">
+            <input type="radio" name="aiModeChoice" value="panel" checked>
+            <div class="mode-card-illustration panel-illustration">
+              <div class="chat-bubble user-bubble">
+                <div class="bubble-text"></div>
+              </div>
+              <div class="chat-bubble ai-bubble">
+                <img src="../../assets/bubble_ai.png" alt="AI" class="ai-avatar">
+                <div class="bubble-text"></div>
+              </div>
+            </div>
+            <span class="mode-card-title" data-en="Panel Mode" data-id="Mode Panel">Panel Mode</span>
+            <span class="mode-card-desc" data-en="Get AI answers and provide direct feedback to AI, suitable for discussion space" data-id="Dapatkan jawaban AI dan berikan feedback langsung kepada AI, cocok untuk ruang diskusi">Get AI answers and provide direct feedback to AI, suitable for discussion space</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 5: Guide -->
+    <div class="step" data-step="5">
+      <h2 data-en="Quick Guide" data-id="Panduan Singkat">Quick Guide</h2>
+      <p data-en="How to use PingoAI easily:" data-id="Cara menggunakan PingoAI dengan mudah:">How to use PingoAI easily:</p>
+
+      <ol>
+        <li data-en="Copy the text you want to process with <strong>Ctrl+C</strong>" data-id="Salin teks yang ingin diproses dengan <strong>Ctrl+C</strong>">Copy the text you want to process with <strong>Ctrl+C</strong></li>
+        <li data-en="Press <strong>Ctrl+W</strong> to display the PingoAI popup if it doesn't appear automatically" data-id="Tekan <strong>Ctrl+W</strong> untuk menampilkan popup PingoAI jika tidak muncul otomatis">Press <strong>Ctrl+W</strong> to display the PingoAI popup if it doesn't appear automatically</li>
+        <li data-en="Select the tool you want to use from the popup" data-id="Pilih alat yang ingin Anda gunakan dari popup">Select the tool you want to use from the popup</li>
+        <li data-en="Use <strong>Ctrl+Q</strong> to open or close the chat window" data-id="Gunakan <strong>Ctrl+Q</strong> untuk membuka atau menutup jendela chat">Use <strong>Ctrl+Q</strong> to open or close the chat window</li>
+      </ol>
+
+      <div class="info-box">
+        💡 <strong data-en="Tips:" data-id="Tips:">Tips:</strong> <span data-en="You can change keyboard shortcuts in the Settings menu anytime." data-id="Anda dapat mengubah shortcut keyboard di menu Pengaturan kapan saja.">You can change keyboard shortcuts in the Settings menu anytime.</span>
+      </div>
+    </div>
+
+    <!-- Step 6: Ready -->
+    <div class="step" data-step="6">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <img src="../../assets/success-illustration.png" alt="Success" style="object-fit: contain; width: 100%; max-width: 100%; height: auto; border-radius: 8px; border: 1px solid rgb(223, 223, 223);">
+      </div>
+      
+      <h2 data-en="PingoAI is Ready to Use! 🎉" data-id="PingoAI Siap Digunakan! 🎉">PingoAI is Ready to Use! 🎉</h2>
+      <p data-en="Thank you for completing the setup. PingoAI is now ready to help you boost your productivity." data-id="Terima kasih telah menyelesaikan setup. PingoAI sekarang siap membantu Anda meningkatkan produktivitas.">Thank you for completing the setup. PingoAI is now ready to help you boost your productivity.</p>
+
+      <div class="final-message">
+        <span data-en="Click <strong>Finish</strong> to start using PingoAI" data-id="Klik <strong>Selesai</strong> untuk mulai menggunakan PingoAI">Click <strong>Finish</strong> to start using PingoAI</span>
+      </div>
+    </div>
+    </div>
+
+    <div class="buttons">
+      <div>
+        <button class="btn btn-secondary" id="prevBtn" style="display:none;" data-en="Back" data-id="Kembali">Back</button>
+      </div>
+      <div style="display:flex; gap:12px;">
+        <button class="btn btn-secondary" id="cancelBtn" data-en="Cancel" data-id="Batal">Cancel</button>
+        <button class="btn btn-primary" id="nextBtn" data-en="Next" data-id="Lanjut">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const steps = document.querySelectorAll('.step');
+    const dots = document.querySelectorAll('.dot');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const eulaCheckbox = document.getElementById('eulaCheckbox');
+    
+    let currentStep = 0;
+    let currentLanguage = 'en';
+    let customApiTested = false;
+    let isMovingForward = true; // Track direction
+
+    function updateStepDisplay() {
+      steps.forEach((step, idx) => {
+        const wasActive = step.classList.contains('active');
+        step.classList.remove('active', 'slide-in-right', 'slide-in-left');
+        
+        if (idx === currentStep) {
+          step.classList.add('active');
+          // Add animation class based on direction
+          if (wasActive === false) {
+            if (isMovingForward) {
+              step.classList.add('slide-in-right');
+            } else {
+              step.classList.add('slide-in-left');
+            }
+          }
+        }
+      });
+      
+      dots.forEach((dot, idx) => {
+        dot.classList.toggle('active', idx === currentStep);
+      });
+
+      prevBtn.style.display = currentStep === 0 ? 'none' : 'inline-block';
+      if (currentStep === steps.length - 1) {
+        nextBtn.textContent = currentLanguage === 'en' ? 'Finish' : 'Selesai';
+      } else {
+        nextBtn.textContent = currentLanguage === 'en' ? 'Next' : 'Lanjut';
+      }
+      
+      // Apply theme preview
+      const themeChoice = document.querySelector('input[name="themeChoice"]:checked')?.value;
+      if (themeChoice === 'dark') {
+        document.body.classList.add('dark-mode');
+      } else if (themeChoice === 'light') {
+        document.body.classList.remove('dark-mode');
+      } else {
+        // system
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.body.classList.toggle('dark-mode', prefersDark);
+      }
+    }
+
+    // Language change listener
+    document.querySelectorAll('input[name="langChoice"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        currentLanguage = e.target.value;
+        updateLanguage(currentLanguage);
+        updateStepDisplay();
+      });
+    });
+
+    function updateLanguage(lang) {
+      document.querySelectorAll('[data-en][data-id]').forEach(el => {
+        const text = lang === 'en' ? el.getAttribute('data-en') : el.getAttribute('data-id');
+        if (el.tagName === 'BUTTON' || el.tagName === 'SPAN' || el.tagName === 'STRONG' || el.tagName === 'DIV') {
+          if (el.innerHTML.includes('<strong>')) {
+            el.innerHTML = text;
+          } else {
+            el.textContent = text;
+          }
+        } else {
+          el.innerHTML = text;
+        }
+      });
+      
+      // Update placeholders
+      document.querySelectorAll('[data-en-placeholder][data-id-placeholder]').forEach(el => {
+        const placeholder = lang === 'en' ? el.getAttribute('data-en-placeholder') : el.getAttribute('data-id-placeholder');
+        el.placeholder = placeholder;
+      });
+      
+      // Update integration preview
+      updateIntegrationPreview();
+    }
+
+    prevBtn.addEventListener('click', () => {
+      if (currentStep > 0) {
+        isMovingForward = false; // Moving backward
+        currentStep--;
+        updateStepDisplay();
+      }
+    });
+
+    nextBtn.addEventListener('click', async () => {
+      // Validation for step 1 (EULA)
+      if (currentStep === 0 && !eulaCheckbox.checked) {
+        const alertMsg = currentLanguage === 'en' 
+          ? 'You must agree to the EULA to continue.' 
+          : 'Anda harus menyetujui EULA untuk melanjutkan.';
+        alert(alertMsg);
+        return;
+      }
+
+      // Validation for step 3 (Custom API)
+      if (currentStep === 2) {
+        const integrationType = document.querySelector('input[name="integrationChoice"]:checked')?.value;
+        if (integrationType === 'custom') {
+          const apiUrl = document.getElementById('customApiUrl').value.trim();
+          const apiKey = document.getElementById('customApiKey').value.trim();
+          const model = document.getElementById('customModel').value.trim();
+          
+          if (!apiUrl || !apiKey || !model) {
+            showToast(
+              'error',
+              currentLanguage === 'en' ? 'Incomplete Configuration' : 'Konfigurasi Belum Lengkap',
+              currentLanguage === 'en' ? 'Please fill in all custom API fields' : 'Harap isi semua field API kustom'
+            );
+            return;
+          }
+
+          if (!customApiTested) {
+            showToast(
+              'error',
+              currentLanguage === 'en' ? 'Connection Not Tested' : 'Koneksi Belum Dites',
+              currentLanguage === 'en' ? 'Please test your API connection first' : 'Harap test koneksi API Anda terlebih dahulu'
+            );
+            return;
+          }
+        }
+      }
+
+      if (currentStep < steps.length - 1) {
+        isMovingForward = true; // Moving forward
+        currentStep++;
+        updateStepDisplay();
+      } else {
+        // Finish onboarding
+        await finishOnboarding();
+      }
+    });
+
+    cancelBtn.addEventListener('click', () => {
+      const confirmMsg = currentLanguage === 'en'
+        ? 'Cancel setup? The application will close.'
+        : 'Batalkan setup? Aplikasi akan ditutup.';
+      if (confirm(confirmMsg)) {
+        window.electronAPI.cancelOnboarding();
+      }
+    });
+
+    // Titlebar controls (inline with logo)
+    const closeBtnInline = document.getElementById('closeBtnInline');
+    const minimizeBtnInline = document.getElementById('minimizeBtnInline');
+
+    // Handler for close button inline with logo
+    closeBtnInline.addEventListener('click', () => {
+      const confirmMsg = currentLanguage === 'en'
+        ? 'Cancel setup? The application will close.'
+        : 'Batalkan setup? Aplikasi akan ditutup.';
+      if (confirm(confirmMsg)) {
+        window.electronAPI.cancelOnboarding();
+      }
+    });
+
+    // Handler for minimize button inline with logo
+    minimizeBtnInline.addEventListener('click', () => {
+      if (window.electronAPI && window.electronAPI.minimizeWindow) {
+        window.electronAPI.minimizeWindow();
+      }
+    });
+
+    // Live preview for theme changes
+    document.querySelectorAll('input[name="themeChoice"]').forEach(radio => {
+      radio.addEventListener('change', updateStepDisplay);
+    });
+
+    // Theme card selection
+    document.querySelectorAll('.theme-card').forEach(card => {
+      card.addEventListener('click', function() {
+        // Remove selected class from all cards
+        document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('selected'));
+        // Add selected class to clicked card
+        this.classList.add('selected');
+        // Trigger the radio button
+        const radio = this.querySelector('input[type="radio"]');
+        if (radio) {
+          radio.checked = true;
+          updateStepDisplay();
+        }
+      });
+    });
+
+    // Set initial selected card
+    const checkedTheme = document.querySelector('input[name="themeChoice"]:checked');
+    if (checkedTheme) {
+      const card = checkedTheme.closest('.theme-card');
+      if (card) card.classList.add('selected');
+    }
+
+    // Preview integration choice
+    const integrationPreview = document.getElementById('integrationPreview');
+    const customApiForm = document.getElementById('customApiForm');
+    
+    function updateIntegrationPreview() {
+      const integrationType = document.querySelector('input[name="integrationChoice"]:checked')?.value || 'free';
+      
+      if (integrationType === 'free') {
+        integrationPreview.style.display = 'block';
+        customApiForm.classList.remove('visible');
+        
+        if (currentLanguage === 'en') {
+          integrationPreview.innerHTML = `
+            <div><strong>🎁 Free (Limited)</strong></div>
+            <div style="margin-top:8px;">
+              <div>✓ No need for your own API key</div>
+              <div>✓ Ready to use immediately</div>
+              <div>✓ Model: openai/gpt-oss-120b</div>
+            </div>
+          `;
+        } else {
+          integrationPreview.innerHTML = `
+            <div><strong>🎁 Gratis (Terbatas)</strong></div>
+            <div style="margin-top:8px;">
+              <div>✓ Tidak perlu API key sendiri</div>
+              <div>✓ Langsung dapat digunakan</div>
+              <div>✓ Model: openai/gpt-oss-120b</div>
+            </div>
+          `;
+        }
+      } else {
+        integrationPreview.style.display = 'none';
+        customApiForm.classList.add('visible');
+        customApiTested = false; // Reset test status when switching to custom
+      }
+    }
+    
+    document.querySelectorAll('input[name="integrationChoice"]').forEach(radio => {
+      radio.addEventListener('change', updateIntegrationPreview);
+    });
+
+    // AI Mode card selection
+    document.querySelectorAll('.mode-card').forEach(card => {
+      card.addEventListener('click', function() {
+        document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
+        this.classList.add('selected');
+        const radio = this.querySelector('input[type="radio"]');
+        if (radio) {
+          radio.checked = true;
+        }
+      });
+    });
+
+    // Set initial selected mode card
+    const checkedMode = document.querySelector('input[name="aiModeChoice"]:checked');
+    if (checkedMode) {
+      const card = checkedMode.closest('.mode-card');
+      if (card) card.classList.add('selected');
+    }
+
+    // API Provider selector handler
+    const apiProvider = document.getElementById('apiProvider');
+    const customApiUrl = document.getElementById('customApiUrl');
+    const customApiKey = document.getElementById('customApiKey');
+    const customModel = document.getElementById('customModel');
+    const urlHelper = document.getElementById('urlHelper');
+    const keyHelper = document.getElementById('keyHelper');
+    const modelHelper = document.getElementById('modelHelper');
+
+    apiProvider.addEventListener('change', (e) => {
+      const provider = e.target.value;
+      
+      if (provider === 'openai') {
+        customApiUrl.value = 'https://api.openai.com/v1/chat/completions';
+        customApiKey.placeholder = 'sk-...';
+        customModel.placeholder = 'gpt-4';
+        
+        if (currentLanguage === 'en') {
+          urlHelper.textContent = 'OpenAI endpoint';
+          keyHelper.textContent = 'Starts with sk- for OpenAI';
+          modelHelper.textContent = 'e.g., gpt-4, gpt-3.5-turbo, gpt-4-turbo';
+        } else {
+          urlHelper.textContent = 'Endpoint OpenAI';
+          keyHelper.textContent = 'Dimulai dengan sk- untuk OpenAI';
+          modelHelper.textContent = 'contoh: gpt-4, gpt-3.5-turbo, gpt-4-turbo';
+        }
+      } else if (provider === 'groq') {
+        customApiUrl.value = 'https://api.groq.com/openai/v1/chat/completions';
+        customApiKey.placeholder = 'gsk_...';
+        customModel.placeholder = 'openai/gpt-oss-120b';
+        
+        if (currentLanguage === 'en') {
+          urlHelper.textContent = 'Groq endpoint';
+          keyHelper.textContent = 'Starts with gsk_ for Groq';
+          modelHelper.textContent = 'e.g., openai/gpt-oss-120b';
+        } else {
+          urlHelper.textContent = 'Endpoint Groq';
+          keyHelper.textContent = 'Dimulai dengan gsk_ untuk Groq';
+          modelHelper.textContent = 'contoh: openai/gpt-oss-120b';
+        }
+      } else {
+        customApiUrl.value = '';
+        customApiKey.placeholder = '';
+        customModel.placeholder = '';
+        
+        if (currentLanguage === 'en') {
+          urlHelper.textContent = 'Enter your custom API endpoint URL';
+          keyHelper.textContent = 'Your API key will be stored securely';
+          modelHelper.textContent = 'Enter the model name from your provider';
+        } else {
+          urlHelper.textContent = 'Masukkan URL endpoint API kustom Anda';
+          keyHelper.textContent = 'API key Anda akan disimpan dengan aman';
+          modelHelper.textContent = 'Masukkan nama model dari penyedia Anda';
+        }
+      }
+      
+      customApiTested = false; // Reset test status when changing provider
+    });
+
+    // Toast Notification Function
+    function showToast(type, title, message, duration = 4000) {
+      const toastContainer = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      
+      toast.innerHTML = `
+        <div class="toast-content">
+          <div class="toast-title">${title}</div>
+          <div class="toast-message">${message}</div>
+        </div>
+        <button class="toast-close" aria-label="Close">×</button>
+      `;
+      
+      toastContainer.appendChild(toast);
+      
+      // Close button handler
+      const closeBtn = toast.querySelector('.toast-close');
+      closeBtn.addEventListener('click', () => {
+        toast.classList.remove('show');
+        toast.classList.add('hide');
+        setTimeout(() => toast.remove(), 300);
+      });
+      
+      // Trigger animation
+      setTimeout(() => toast.classList.add('show'), 10);
+      
+      // Auto remove
+      const autoRemoveTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+        toast.classList.add('hide');
+        setTimeout(() => toast.remove(), 300);
+      }, duration);
+      
+      // Cancel auto-remove if manually closed
+      closeBtn.addEventListener('click', () => clearTimeout(autoRemoveTimeout), { once: true });
+    }
+
+    // Test Connection Handler
+    const testConnectionBtn = document.getElementById('testConnectionBtn');
+
+    testConnectionBtn.addEventListener('click', async () => {
+      const apiUrl = document.getElementById('customApiUrl').value.trim();
+      const apiKey = document.getElementById('customApiKey').value.trim();
+      const model = document.getElementById('customModel').value.trim();
+
+      // Validate inputs
+      if (!apiUrl || !apiKey || !model) {
+        showToast(
+          'error',
+          currentLanguage === 'en' ? 'Validation Error' : 'Kesalahan Validasi',
+          currentLanguage === 'en' ? 'Please fill in all fields' : 'Harap isi semua field'
+        );
+        return;
+      }
+
+      // Validate URL format
+      try {
+        new URL(apiUrl);
+      } catch (e) {
+        showToast(
+          'error',
+          currentLanguage === 'en' ? 'Invalid URL' : 'URL Tidak Valid',
+          currentLanguage === 'en' ? 'Please enter a valid API URL' : 'Harap masukkan URL API yang valid'
+        );
+        return;
+      }
+
+      // Disable button and show loading
+      testConnectionBtn.disabled = true;
+      const originalText = testConnectionBtn.textContent;
+      testConnectionBtn.textContent = currentLanguage === 'en' ? 'Testing...' : 'Menguji...';
+
+      showToast(
+        'info',
+        currentLanguage === 'en' ? 'Testing Connection Your Custom API' : 'Uji Koneksi API Kustom Anda',
+        currentLanguage === 'en' ? 'Please wait...' : 'Mohon tunggu...',
+        2000
+      );
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              {
+                role: 'user',
+                content: 'Hello, this is a test message.'
+              }
+            ],
+            max_tokens: 10
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          showToast(
+            'success',
+            currentLanguage === 'en' ? 'Connection Successful' : 'Koneksi Berhasil',
+            currentLanguage === 'en' ? 'API connection test passed!' : 'Test koneksi API berhasil!'
+          );
+          customApiTested = true;
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          showToast(
+            'error',
+            currentLanguage === 'en' ? 'Connection Failed' : 'Koneksi Gagal',
+            currentLanguage === 'en' 
+              ? `Error ${response.status}: ${errorData.error?.message || response.statusText}` 
+              : `Kesalahan ${response.status}: ${errorData.error?.message || response.statusText}`
+          );
+          customApiTested = false;
+        }
+      } catch (error) {
+        showToast(
+          'error',
+          currentLanguage === 'en' ? 'Connection Failed' : 'Koneksi Gagal',
+          currentLanguage === 'en' 
+            ? `Network error: ${error.message}` 
+            : `Kesalahan jaringan: ${error.message}`
+        );
+        customApiTested = false;
+      } finally {
+        testConnectionBtn.disabled = false;
+        testConnectionBtn.textContent = originalText;
+      }
+    });
+
+    async function finishOnboarding() {
+      const themeChoice = document.querySelector('input[name="themeChoice"]:checked')?.value || 'light';
+      const langChoice = document.querySelector('input[name="langChoice"]:checked')?.value || 'en';
+      const integrationType = document.querySelector('input[name="integrationChoice"]:checked')?.value || 'free';
+      const aiMode = document.querySelector('input[name="aiModeChoice"]:checked')?.value || 'panel';
+
+      const config = {
+        theme: themeChoice,
+        language: langChoice,
+        integration: integrationType,
+        aiMode: aiMode,
+        runInBackground: true
+      };
+
+      // If custom integration, include API details
+      if (integrationType === 'custom') {
+        config.customApi = {
+          url: document.getElementById('customApiUrl').value.trim(),
+          key: document.getElementById('customApiKey').value.trim(),
+          model: document.getElementById('customModel').value.trim()
+        };
+      }
+
+      try {
+        await window.electronAPI.completeOnboarding(config);
+      } catch (err) {
+        console.error('Failed to complete onboarding:', err);
+        const errorMsg = currentLanguage === 'en'
+          ? 'An error occurred. Please try again.'
+          : 'Terjadi kesalahan. Silakan coba lagi.';
+        alert(errorMsg);
+      }
+    }
+
+    updateStepDisplay();
+
+    // Make EULA content read-only (prevent editing)
+    document.addEventListener('DOMContentLoaded', () => {
+      const eulaContent = document.getElementById('eulaContent');
+      if (eulaContent) {
+        // Prevent any editing attempts
+        eulaContent.setAttribute('contenteditable', 'false');
+        
+        // Prevent drag and drop
+        eulaContent.addEventListener('drop', (e) => e.preventDefault());
+        eulaContent.addEventListener('dragover', (e) => e.preventDefault());
+        
+        // Prevent paste (if someone tries to modify via dev tools)
+        eulaContent.addEventListener('paste', (e) => e.preventDefault());
+        eulaContent.addEventListener('cut', (e) => e.preventDefault());
+      }
+    });
+  </script>
+</body>
+</html>

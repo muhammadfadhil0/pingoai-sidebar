@@ -1,0 +1,2526 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>PingoAI Settings</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      /* Light mode colors */
+      --bg-primary: #ffffff;
+      --bg-secondary: #f3f4f6;
+      --text-primary: #1f2937;
+      --text-secondary: #6b7280;
+      --border-color: #e5e7eb;
+      --input-bg: #ffffff;
+      --input-border: #d1d5db;
+      --orange: #ff6b35;
+      --orange-hover: #ff5722;
+      --orange-light: #fff5eb;
+    }
+
+    body.dark-mode {
+      /* Dark mode colors */
+      --bg-primary: #1f2937;
+      --bg-secondary: #374151;
+      --text-primary: #f9fafb;
+      --text-secondary: #9ca3af;
+      --border-color: #4b5563;
+      --input-bg: #374151;
+      --input-border: #4b5563;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: var(--bg-primary);
+      padding: 0;
+      height: 100vh;
+      overflow: hidden;
+      transition: background-color 0.3s ease;
+      display: flex;
+    }
+
+    .settings-layout {
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
+
+    .settings-sidebar {
+      width: 200px;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      padding: 20px 0;
+      flex-shrink: 0;
+    }
+
+    .settings-content {
+      flex: 1;
+      padding: 0;
+      overflow-y: auto;
+      position: relative;
+      background: var(--bg-primary);
+    }
+
+    .settings-content-inner {
+      padding: 40px;
+      max-width: 800px;
+      margin: 0 auto;
+      padding-bottom: 100px; /* Space for fixed buttons if needed */
+    }
+
+    .sidebar-header {
+      padding: 0 20px 20px;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 10px;
+    }
+
+    .sidebar-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 10px;
+      overflow-y: auto;
+    }
+
+    .sidebar-item {
+      padding: 12px 16px;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .sidebar-item:hover {
+      background: rgba(0, 0, 0, 0.05);
+      color: var(--text-primary);
+    }
+
+    .sidebar-item.active {
+      background: var(--orange-light);
+      color: var(--orange);
+    }
+
+    .sidebar-item svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+
+    .settings-section {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .settings-section.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .settings-container {
+      background: transparent;
+      border-radius: 0;
+      max-width: 100%;
+      margin: 0;
+      box-shadow: none;
+    }
+
+    h1 {
+      color: var(--text-primary);
+      margin-bottom: 10px;
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      justify-content: flex-start;
+    }
+
+    h1 svg {
+      width: 24px;
+      height: 24px;
+      fill: var(--orange);
+    }
+
+    .theme-mode-buttons {
+      display: flex;
+      gap: 12px;
+    }
+
+    .theme-mode-btn {
+      flex: 1;
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .theme-mode-btn:hover:not(.active) {
+      background: var(--border-color);
+      color: var(--orange);
+      border-color: var(--orange);
+    }
+
+    .theme-mode-btn.active {
+      background: var(--orange-light);
+      border-color: var(--orange);
+      color: var(--orange-hover);
+      /* box-shadow: 0 6px 16px rgba(255, 107, 53, 0.2); */
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .form-group {
+      margin-bottom: 25px;
+    }
+
+    .toggle-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-primary);
+      font-size: 14px;
+    }
+
+    .toggle-control input {
+      width: 18px;
+      height: 18px;
+    }
+
+    .toggle-control.disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    input[type="number"] {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid var(--input-border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.2s ease;
+      background: var(--input-bg);
+      color: var(--text-primary);
+    }
+
+    input[type="text"]:focus,
+    input[type="password"]:focus,
+    input[type="number"]:focus {
+      outline: none;
+      border-color: var(--orange);
+      /* box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1); */
+    }
+
+    select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid var(--input-border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      background: var(--input-bg);
+      color: var(--text-primary);
+      transition: all 0.2s ease;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: var(--orange);
+      /* box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1); */
+    }
+
+    .input-hint {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .button-group {
+      position: fixed;
+      bottom: 0;
+      left: 200px; /* Sidebar width */
+      right: 0;
+      background: var(--bg-primary);
+      padding: 12px 24px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      gap: 12px;
+      z-index: 100;
+      justify-content: flex-end; /* Align to right */
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+    }
+
+    .button-group button {
+      max-width: 180px;
+      padding: 8px 16px;
+      font-size: 13px;
+      border-radius: 6px;
+    }
+
+    button {
+      flex: 1;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: var(--orange);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--orange-hover);
+      transform: translateY(-2px);
+      /* box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4); */
+    }
+
+    .btn-secondary {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-secondary:hover {
+      background: var(--border-color);
+    }
+
+    /* Toast Notification */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: #ef4444;
+      border-radius: 8px;
+      padding: 16px;
+      min-width: 300px;
+      max-width: 400px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      opacity: 0;
+      transform: translateX(400px);
+      transition: all 0.3s ease;
+      pointer-events: auto;
+    }
+
+    .toast.success {
+      background: #10b981;
+    }
+
+    .toast.error {
+      background: #ef4444;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .toast.hide {
+      opacity: 0;
+      transform: translateX(400px);
+    }
+
+    .toast-content {
+      color: #ffffff;
+    }
+
+    .toast-title {
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 4px;
+      color: #ffffff;
+    }
+
+    .toast-message {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.9);
+      line-height: 1.4;
+    }
+
+    .toast-close {
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.7);
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      width: 24px;
+      height: 24px;
+    }
+
+    .toast-close:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+    }
+
+    .toast-close svg {
+      width: 16px;
+      height: 16px;
+    }
+
+
+    .success-message.show,
+    .error-message.show {
+      display: block;
+    }
+
+    .preset-buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .preset-btn {
+      padding: 6px 12px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: var(--text-primary);
+    }
+
+    .preset-btn:hover {
+      background: var(--orange-light);
+      border-color: var(--orange);
+      color: var(--orange);
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border-color);
+      margin: 25px 0;
+    }
+
+    .info-box {
+      background: var(--orange-light);
+      border: 1px solid var(--orange);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-top: 20px;
+      font-size: 13px;
+      color: var(--text-primary);
+    }
+
+    .info-box strong {
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .info-box ul {
+      margin-left: 20px;
+      margin-top: 8px;
+    }
+
+    .info-box li {
+      margin-bottom: 4px;
+    }
+
+    .section-header {
+      color: var(--text-primary);
+      font-size: 18px;
+      font-weight: 600;
+      margin-top: 35px;
+      margin-bottom: 20px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--orange);
+    }
+
+    .mode-option,
+    .toggle-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 10px 0;
+    }
+
+    .mode-option input[type="radio"],
+    .toggle-row input[type="checkbox"] {
+      margin-top: 4px;
+      width: 18px;
+      height: 18px;
+    }
+
+    .mode-option strong,
+    .toggle-row strong {
+      display: block;
+      color: var(--text-primary);
+      font-size: 14px;
+    }
+
+    .mode-option span,
+    .toggle-row span {
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+
+    .window-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 12px;
+    }
+
+    .range-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .range-row span {
+      min-width: 70px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    input[type="range"] {
+      flex: 1;
+    }
+
+    .shortcut-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .shortcut-display {
+      flex: 1;
+      border: 1px dashed var(--border-color);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      background: var(--bg-primary);
+    }
+
+    .ghost-btn {
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .ghost-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .ghost-btn:hover:not(:disabled) {
+      border-color: var(--orange);
+      color: var(--orange);
+    }
+
+    .mode-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 12px;
+    }
+
+    .mode-card {
+      position: relative;
+      display: block;
+      border: 2px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: var(--bg-primary);
+    }
+
+    .mode-card:hover {
+      border-color: var(--orange);
+      /* box-shadow: 0 4px 12px rgba(255, 107, 53, 0.15);
+      transform: translateY(-2px); */
+    }
+
+    .mode-card.selected {
+      border-color: var(--orange);
+      background: var(--orange-light);
+      /* box-shadow: 0 6px 16px rgba(255, 107, 53, 0.2); */
+    }
+
+    .mode-card input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .mode-card-icon {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 12px;
+      display: block;
+      object-fit: contain;
+    }
+
+    .mode-card-illustration {
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 60px;
+    }
+
+    /* Glance Mode Illustration */
+    .glance-illustration {
+      justify-content: flex-start;
+    }
+
+    .glance-bubble {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ff8a50, #ff6b35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+    }
+
+    .glance-bubble .bubble-icon {
+      width: 32px;
+      height: 32px;
+      filter: brightness(0) invert(1);
+    }
+
+    .glance-lines {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .glance-lines .line {
+      height: 8px;
+      background: var(--border-color);
+      border-radius: 4px;
+      opacity: 0.6;
+    }
+
+    .glance-lines .line.short {
+      width: 60%;
+    }
+
+    /* Panel Mode Illustration */
+    .panel-illustration {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
+
+    .chat-bubble {
+      border-radius: 12px;
+      padding: 8px 12px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .user-bubble {
+      background: var(--orange-light);
+      border: 1px solid var(--orange);
+      align-self: flex-end;
+      max-width: 75%;
+    }
+
+    .ai-bubble {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      align-self: flex-start;
+      max-width: 85%;
+    }
+
+    .ai-bubble .ai-avatar {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .bubble-text {
+      height: 6px;
+      background: currentColor;
+      opacity: 0.3;
+      border-radius: 3px;
+      flex: 1;
+      min-width: 60px;
+    }
+
+    .user-bubble .bubble-text {
+      color: var(--orange);
+    }
+
+    .ai-bubble .bubble-text {
+      color: var(--text-secondary);
+    }
+
+    .mode-card-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .mode-card-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      display: block;
+    }
+
+    .mode-card.selected .mode-card-title {
+      color: var(--orange-hover);
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .modal-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-content {
+      background: var(--bg-primary);
+      padding: 24px;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+      transform: translateY(20px);
+      transition: transform 0.3s ease;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-overlay.show .modal-content {
+      transform: translateY(0);
+    }
+
+    .modal-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--orange-light);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+    }
+
+    .modal-icon svg {
+      width: 24px;
+      height: 24px;
+      fill: var(--orange);
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .modal-message {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    .modal-btn {
+      width: 100%;
+      padding: 12px;
+      background: var(--orange);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .modal-btn:hover {
+      background: var(--orange-hover);
+    }
+
+    /* Theme Cards (from onboarding) */
+    .theme-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .theme-card {
+      position: relative;
+      display: block;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: var(--bg-primary);
+    }
+
+    .theme-card:hover {
+      border-color: var(--orange);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .theme-card.selected {
+      border-color: var(--orange);
+      background: var(--orange-light);
+    }
+
+    .theme-card input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .theme-preview {
+      width: 100%;
+      height: 80px;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 8px;
+      border: 1px solid var(--border-color);
+      position: relative;
+    }
+
+    .theme-preview-window {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      padding: 0 6px;
+      gap: 4px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .window-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .window-dot:nth-child(1) { background: #ff5f57; }
+    .window-dot:nth-child(2) { background: #febc2e; }
+    .window-dot:nth-child(3) { background: #28c840; }
+
+    .theme-preview-content {
+      position: absolute;
+      top: 20px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 8px;
+    }
+
+    .theme-preview-bar {
+      height: 6px;
+      border-radius: 3px;
+      margin-bottom: 4px;
+    }
+
+    /* Light theme preview */
+    .theme-preview.light {
+      background: #ffffff;
+    }
+
+    .theme-preview.light .theme-preview-window {
+      background: #f5f5f5;
+    }
+
+    .theme-preview.light .theme-preview-bar:nth-child(1) {
+      background: #e0e0e0;
+      width: 70%;
+    }
+
+    .theme-preview.light .theme-preview-bar:nth-child(2) {
+      background: #e0e0e0;
+      width: 50%;
+    }
+
+    .theme-preview.light .theme-preview-bar:nth-child(3) {
+      background: #e0e0e0;
+      width: 60%;
+    }
+
+    /* Dark theme preview */
+    .theme-preview.dark {
+      background: #1a1a1a;
+    }
+
+    .theme-preview.dark .theme-preview-window {
+      background: #2d2d2d;
+      border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .theme-preview.dark .theme-preview-bar:nth-child(1) {
+      background: #3d3d3d;
+      width: 70%;
+    }
+
+    .theme-preview.dark .theme-preview-bar:nth-child(2) {
+      background: #3d3d3d;
+      width: 50%;
+    }
+
+    .theme-preview.dark .theme-preview-bar:nth-child(3) {
+      background: #3d3d3d;
+      width: 60%;
+    }
+
+    /* System theme preview (split) */
+    .theme-preview.system {
+      display: flex;
+    }
+
+    .theme-preview-half {
+      flex: 1;
+      position: relative;
+      height: 100%;
+    }
+
+    .theme-preview-half.light {
+      background: #ffffff;
+      border-right: 1px solid var(--border-color);
+    }
+
+    .theme-preview-half.dark {
+      background: #1a1a1a;
+    }
+
+    .theme-preview-half .theme-preview-window {
+      width: 100%;
+    }
+
+    .theme-preview-half.light .theme-preview-window {
+      background: #f5f5f5;
+    }
+
+    .theme-preview-half.dark .theme-preview-window {
+      background: #2d2d2d;
+      border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .theme-preview-half.light .theme-preview-bar {
+      background: #e0e0e0;
+    }
+
+    .theme-preview-half.dark .theme-preview-bar {
+      background: #3d3d3d;
+    }
+
+    .theme-preview-half .theme-preview-bar:nth-child(1) { width: 70%; }
+    .theme-preview-half .theme-preview-bar:nth-child(2) { width: 50%; }
+
+    .theme-card-label {
+      text-align: center;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+  </style>
+</head>
+<body>
+  <div class="settings-layout">
+    <div class="settings-sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">
+          <span data-i18n="settingsTitle">Settings</span>
+        </div>
+      </div>
+      
+      <div class="sidebar-nav">
+        <div class="sidebar-item active" data-tab="ai-mode">
+          <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+          <span data-i18n="aiModeSectionTitle">AI Mode</span>
+        </div>
+        <div class="sidebar-item" data-tab="language">
+          <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95c-.32-1.25-.78-2.45-1.38-3.56 1.84.63 3.37 1.91 4.33 3.56zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2 0 .68.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56-1.84-.63-3.37-1.91-4.33-3.56zm2.95-8H5.08c.96-1.65 2.49-2.93 4.33-3.56C8.81 5.55 8.35 6.75 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2 0-.68.07-1.35.16-2h4.68c.09.65.16 1.32.16 2 0 .68-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95c-.96 1.65-2.49 2.93-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2 0-.68-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg>
+          <span data-i18n="languageSectionTitle">Language</span>
+        </div>
+        <div class="sidebar-item" data-tab="appearance">
+          <svg viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+          <span data-i18n="appearanceSectionTitle">Appearance</span>
+        </div>
+        <div class="sidebar-item" data-tab="integration">
+          <svg viewBox="0 0 24 24"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
+          <span data-i18n="integrationSectionTitle">Integration</span>
+        </div>
+        <div class="sidebar-item" data-tab="service">
+          <svg viewBox="0 0 24 24"><path d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/></svg>
+          <span data-i18n="serviceSectionTitle">Service</span>
+        </div>
+        <div class="sidebar-item" data-tab="window">
+          <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/></svg>
+          <span data-i18n="windowSectionTitle">Window Settings</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-content">
+      <div class="settings-content-inner">
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Warning Modal -->
+    <div class="modal-overlay" id="warningModal">
+      <div class="modal-content">
+        <div class="modal-icon">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+          </svg>
+        </div>
+        <h3 class="modal-title" data-i18n="glanceModeWarningTitle">Glance Mode Requirement</h3>
+        <p class="modal-message" data-i18n="glanceModeWarningMsg">Glance Mode requires PingoAI to run in the background to function correctly. This setting cannot be disabled while in Glance Mode.</p>
+        <button class="modal-btn" id="closeModalBtn" data-i18n="glanceModeWarningBtn">Understood</button>
+      </div>
+    </div>
+
+    <form id="settingsForm">
+      <!-- AI MODE SECTION -->
+      <div id="section-ai-mode" class="settings-section active">
+      <h2 class="section-header" data-i18n="aiModeSectionTitle">AI Mode</h2>
+
+      <div class="form-group">
+        <div class="mode-cards">
+          <!-- Glance Mode Card -->
+          <label class="mode-card" data-mode="glance">
+            <input type="radio" name="aiModeChoice" value="glance">
+            <div class="mode-card-illustration glance-illustration">
+              <div class="glance-bubble">
+                <img src="../../assets/bubble_ai.png" alt="AI" class="bubble-icon">
+              </div>
+              <div class="glance-lines">
+                <div class="line"></div>
+                <div class="line"></div>
+                <div class="line short"></div>
+              </div>
+            </div>
+            <span class="mode-card-title" data-i18n="glanceModeTitle">Glance Mode</span>
+            <span class="mode-card-desc" data-i18n="glanceModeDesc">Dapatkan jawaban AI secara ringkas, cocok untuk penjelasan cepat dan instan</span>
+          </label>
+
+          <!-- Panel Mode Card -->
+          <label class="mode-card" data-mode="panel">
+            <input type="radio" name="aiModeChoice" value="panel">
+            <div class="mode-card-illustration panel-illustration">
+              <div class="chat-bubble user-bubble">
+                <div class="bubble-text"></div>
+              </div>
+              <div class="chat-bubble ai-bubble">
+                <img src="../../assets/bubble_ai.png" alt="AI" class="ai-avatar">
+                <div class="bubble-text"></div>
+              </div>
+            </div>
+            <span class="mode-card-title" data-i18n="panelModeTitle">Panel Mode</span>
+            <span class="mode-card-desc" data-i18n="panelModeDesc">Dapatkan jawaban AI dan berikan feedback langsung kepada AI, cocok untuk ruang diskusi</span>
+          </label>
+        </div>
+      </div>
+
+      </div>
+      <!-- LANGUAGE SECTION -->
+      <div id="section-language" class="settings-section">
+      <h2 class="section-header" data-i18n="languageSectionTitle">Language</h2>
+
+      <div class="form-group">
+        <label data-i18n="interfaceLanguageLabel">Interface Language</label>
+        <div class="theme-mode-buttons">
+          <button type="button" class="theme-mode-btn interface-lang-btn" data-lang="en">English</button>
+          <button type="button" class="theme-mode-btn interface-lang-btn" data-lang="id">Bahasa Indonesia</button>
+        </div>
+        <div class="input-hint" data-i18n="interfaceLanguageHint">Choose your preferred interface language</div>
+      </div>
+
+      <div class="form-group">
+        <label data-i18n="aiLanguageLabel">AI Language</label>
+        <div class="theme-mode-buttons">
+          <button type="button" class="theme-mode-btn ai-lang-btn" data-lang="en">English</button>
+          <button type="button" class="theme-mode-btn ai-lang-btn" data-lang="id">Bahasa Indonesia</button>
+        </div>
+        <div class="input-hint" data-i18n="aiLanguageHint">Language for AI responses and interactions</div>
+      </div>
+
+      </div>
+      <!-- APPEARANCE SECTION -->
+      <div id="section-appearance" class="settings-section">
+      <h2 class="section-header" data-i18n="appearanceSectionTitle">Appearance</h2>
+
+      <div class="form-group theme-mode-group">
+        <label data-i18n="themeModeLabel">Theme Mode</label>
+        <div class="theme-cards">
+          <!-- Light Theme Card -->
+          <label class="theme-card" data-theme="light">
+            <input type="radio" name="themeChoice" value="light">
+            <div class="theme-preview light">
+              <div class="theme-preview-window">
+                <div class="window-dot"></div>
+                <div class="window-dot"></div>
+                <div class="window-dot"></div>
+              </div>
+              <div class="theme-preview-content">
+                <div class="theme-preview-bar"></div>
+                <div class="theme-preview-bar"></div>
+                <div class="theme-preview-bar"></div>
+              </div>
+            </div>
+            <div class="theme-card-label">Light</div>
+          </label>
+
+          <!-- Dark Theme Card -->
+          <label class="theme-card" data-theme="dark">
+            <input type="radio" name="themeChoice" value="dark">
+            <div class="theme-preview dark">
+              <div class="theme-preview-window">
+                <div class="window-dot"></div>
+                <div class="window-dot"></div>
+                <div class="window-dot"></div>
+              </div>
+              <div class="theme-preview-content">
+                <div class="theme-preview-bar"></div>
+                <div class="theme-preview-bar"></div>
+                <div class="theme-preview-bar"></div>
+              </div>
+            </div>
+            <div class="theme-card-label">Dark</div>
+          </label>
+
+          <!-- System Theme Card -->
+          <label class="theme-card" data-theme="system">
+            <input type="radio" name="themeChoice" value="system">
+            <div class="theme-preview system">
+              <div class="theme-preview-half light">
+                <div class="theme-preview-window">
+                  <div class="window-dot"></div>
+                  <div class="window-dot"></div>
+                  <div class="window-dot"></div>
+                </div>
+                <div class="theme-preview-content">
+                  <div class="theme-preview-bar"></div>
+                  <div class="theme-preview-bar"></div>
+                </div>
+              </div>
+              <div class="theme-preview-half dark">
+                <div class="theme-preview-window">
+                  <div class="window-dot"></div>
+                  <div class="window-dot"></div>
+                  <div class="window-dot"></div>
+                </div>
+                <div class="theme-preview-content">
+                  <div class="theme-preview-bar"></div>
+                  <div class="theme-preview-bar"></div>
+                </div>
+              </div>
+            </div>
+            <div class="theme-card-label">System</div>
+          </label>
+        </div>
+        <div class="input-hint" data-i18n="themeModeHint">Gunakan tema terang, gelap, atau ikuti preferensi sistem Anda.</div>
+      </div>
+
+      <div class="form-group">
+        <label class="toggle-row" for="transparentToggle">
+          <input type="checkbox" id="transparentToggle" />
+          <div>
+            <strong data-i18n="transparentPanelLabel">Transparankan Panel</strong>
+            <span data-i18n="transparentPanelHint">Membuat panel menjadi semi-transparan</span>
+          </div>
+        </label>
+
+        <div id="transparencySliderContainer" style="display: none; margin-left: 30px; margin-top: 8px;">
+          <label style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;" data-i18n="transparencyLevelLabel">Tingkat Transparansi</label>
+          <div class="range-row">
+            <input type="range" id="transparencySlider" min="0.3" max="1.0" step="0.05" value="0.95" />
+            <span id="transparencyValue">95%</span>
+          </div>
+          <div class="input-hint" style="margin-top: 4px;" data-i18n="transparencySliderHint">Semakin rendah, semakin transparan (30% - 100%)</div>
+        </div>
+      </div>
+
+      </div>
+      <!-- INTEGRATION SECTION -->
+      <div id="section-integration" class="settings-section">
+      <h2 class="section-header" data-i18n="integrationSectionTitle">Integration</h2>
+
+      <div class="form-group">
+        <label data-i18n="integrationChoiceLabel">Connection Type</label>
+        <div style="display:flex; gap:12px; margin-top:8px;">
+          <label><input type="radio" name="integrationChoice" id="integrationFreeRadio" value="free"> Gratis (terbatas)</label>
+          <label><input type="radio" name="integrationChoice" id="integrationCustomRadio" value="custom" checked> Isi URL/API Key</label>
+        </div>
+        <div class="input-hint">Pilih "Gratis" untuk menggunakan opsi terbatas gratis atau pilih "Isi" untuk memasukkan endpoint Anda sendiri.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="apiUrl" data-i18n="apiUrlLabel">API URL</label>
+        <input 
+          type="text" 
+          id="apiUrl" 
+          placeholder="https://api.openai.com/v1/chat/completions"
+          data-i18n-placeholder="apiUrlPlaceholder"
+          required
+        />
+        <div class="preset-buttons">
+          <button type="button" class="preset-btn" data-url="https://api.openai.com/v1/chat/completions">OpenAI</button>
+          <button type="button" class="preset-btn" data-url="https://api.anthropic.com/v1/messages">Anthropic</button>
+        </div>
+        <div class="input-hint" data-i18n="apiUrlHint">
+          The endpoint URL for your AI service (Groq base: https://api.groq.com/openai/v1)
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="apiKey" data-i18n="apiKeyLabel">API Key</label>
+        <input 
+          type="password" 
+          id="apiKey" 
+          placeholder="sk-..."
+          data-i18n-placeholder="apiKeyPlaceholder"
+          required
+        />
+        <div class="input-hint" data-i18n="apiKeyHint">
+          Your API key will be stored securely on your computer
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="modelName" data-i18n="modelLabel">Model</label>
+        <input 
+          type="text" 
+          id="modelName" 
+          placeholder="openai/gpt-oss-20b"
+          data-i18n-placeholder="modelPlaceholder"
+          required
+        />
+        <div class="input-hint" data-i18n="modelHint">
+          Example (Groq): openai/gpt-oss-20b · See https://console.groq.com/docs for the latest list
+        </div>
+      </div>
+
+      </div>
+      <!-- SERVICE SECTION -->
+      <div id="section-service" class="settings-section">
+      <h2 class="section-header" data-i18n="serviceSectionTitle">Service</h2>
+
+      <div class="form-group">
+        <label class="toggle-row" for="runInBackgroundToggle">
+          <input type="checkbox" id="runInBackgroundToggle" />
+          <div>
+            <strong data-i18n="runInBackgroundLabel">Run PingoAI in background when closing the app</strong>
+            <span data-i18n="runInBackgroundHint">The app will stay in system tray instead of fully quitting</span>
+          </div>
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label class="toggle-row" for="autoStartToggle">
+          <input type="checkbox" id="autoStartToggle" />
+          <div>
+            <strong data-i18n="autoStartLabel">Launch PingoAI automatically on system startup</strong>
+            <span data-i18n="autoStartHint">PingoAI will start automatically when your computer boots up</span>
+          </div>
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label for="autoHideDuration" data-i18n="autoHideDurationLabel">Hide Pingo pop up if no interaction for</label>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <input 
+            type="number" 
+            id="autoHideDuration" 
+            min="1" 
+            max="60" 
+            value="4"
+            required
+            style="max-width: 120px;"
+          />
+          <span style="color: var(--text-secondary); font-size: 14px;" data-i18n="secondsUnit">seconds</span>
+        </div>
+        <div class="input-hint" data-i18n="autoHideDurationHint">
+          Default is 4 seconds.
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="toggle-row" for="allowDuplicateTextToggle">
+          <input type="checkbox" id="allowDuplicateTextToggle" />
+          <div>
+            <strong data-i18n="allowDuplicateTextLabel">Izinkan Pingo memproses teks yang sama dua kali berturut-turut</strong>
+            <span data-i18n="allowDuplicateTextHint">Ketika aktif, Anda dapat copy-paste dan meminta AI menganalisis teks yang sama hingga 2 kali</span>
+          </div>
+        </label>
+      </div>
+
+
+      </div>
+      <!-- WINDOW SETTINGS SECTION -->
+      <div id="section-window" class="settings-section">
+      <h2 class="section-header" data-i18n="windowSectionTitle">Window Settings</h2>
+
+      <div class="form-group">
+        <label class="toggle-row" for="alwaysOnTopToggle">
+          <input type="checkbox" id="alwaysOnTopToggle" />
+          <div>
+            <strong data-i18n="alwaysOnTopLabel">Always on Top</strong>
+            <span data-i18n="alwaysOnTopHint">Panel selalu tampil di atas window lain</span>
+          </div>
+        </label>
+      </div>
+
+      <div class="window-grid">
+        <div class="form-group">
+          <label for="panelPosition" data-i18n="panelPositionLabel">Panel Position</label>
+          <select id="panelPosition">
+            <option value="right" data-i18n="panelPositionRight">Right</option>
+            <option value="left" data-i18n="panelPositionLeft">Left</option>
+            <option value="top" data-i18n="panelPositionTop">Top</option>
+            <option value="bottom" data-i18n="panelPositionBottom">Bottom</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="panelWidth" data-i18n="panelSizeLabel">Panel Size (300-600px)</label>
+          <div class="range-row">
+            <input type="range" id="panelWidth" min="300" max="600" step="10" value="400" />
+            <span id="panelWidthValue">400px</span>
+          </div>
+          <div class="input-hint" data-i18n="panelSizeHint">Top/bottom positions use this value as height.</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label data-i18n="shortcutsLabel">Keyboard Shortcuts</label>
+        <div class="input-hint" style="margin-bottom: 12px;" data-i18n="shortcutsHint">Customize keyboard shortcuts for quick access</div>
+        
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div>
+            <label style="font-size: 13px; margin-bottom: 4px;" data-i18n="toggleChatLabel">💡 Toggle Chat Window</label>
+            <div class="shortcut-row">
+              <div class="shortcut-display" id="shortcutDisplay">Ctrl+Alt+A</div>
+              <button type="button" class="ghost-btn" id="changeShortcutBtn" data-i18n="changeShortcutButton">Change</button>
+            </div>
+            <div class="input-hint" data-i18n="toggleChatHint">Show/hide the main chat panel</div>
+          </div>
+
+          <div>
+            <label style="font-size: 13px; margin-bottom: 4px;" data-i18n="openSettingsLabel">⚙️ Open Settings</label>
+            <div class="shortcut-row">
+              <div class="shortcut-display" id="settingsShortcutDisplay">Ctrl+Shift+S</div>
+              <button type="button" class="ghost-btn" id="changeSettingsShortcutBtn" data-i18n="changeShortcutButton">Change</button>
+            </div>
+            <div class="input-hint" data-i18n="openSettingsHint">Open settings window anytime</div>
+          </div>
+
+          <div>
+            <label style="font-size: 13px; margin-bottom: 4px;" data-i18n="showBubbleLabel">🔍 Show AI Bubble</label>
+            <div class="shortcut-row">
+              <div class="shortcut-display" id="bubbleShortcutDisplay">Ctrl+Shift+X</div>
+              <button type="button" class="ghost-btn" id="changeBubbleShortcutBtn" data-i18n="changeShortcutButton">Change</button>
+            </div>
+            <div class="input-hint" data-i18n="showBubbleHint">Show AI bubble for selected text</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group" style="display: none;">
+        <label data-i18n="textSelectionLabel">Text Selection Bubble</label>
+        <div class="toggle-control">
+          <input type="checkbox" id="highlightWatcherToggle" />
+          <span data-i18n="textSelectionToggleHint">Munculkan bubble otomatis saat teks di-highlight (tanpa copy)</span>
+        </div>
+        <div class="input-hint" data-i18n="textSelectionHint">Hanya tersedia di Windows dan membutuhkan modul HighlightWatcher (jalankan "npm run watcher:build").</div>
+      </div>
+
+      </div>
+      <div class="divider"></div>
+
+      <div class="button-group">
+        <button type="button" class="btn-secondary" id="testBtn" data-i18n="testConnectionButton">Test Connection</button>
+        <button type="submit" class="btn-primary" data-i18n="saveSettingsButton">Apply Settings</button>
+      </div>
+      <div style="height: 100px;"></div>
+    </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const settingsForm = document.getElementById('settingsForm');
+
+    // Sidebar Tab Switching Logic
+    const sidebarItems = document.querySelectorAll('.sidebar-item');
+    const sections = document.querySelectorAll('.settings-section');
+
+    function switchTab(tabId) {
+      // Update sidebar active state
+      sidebarItems.forEach(item => {
+        if (item.dataset.tab === tabId) {
+          item.classList.add('active');
+        } else {
+          item.classList.remove('active');
+        }
+      });
+
+      // Show target section
+      sections.forEach(section => {
+        if (section.id === `section-${tabId}`) {
+          section.classList.add('active');
+        } else {
+          section.classList.remove('active');
+        }
+      });
+      
+      // Scroll content to top
+      const contentArea = document.querySelector('.settings-content');
+      if (contentArea) contentArea.scrollTop = 0;
+    }
+
+    sidebarItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const tabId = item.dataset.tab;
+        switchTab(tabId);
+      });
+    });
+    const apiUrlInput = document.getElementById('apiUrl');
+    const apiKeyInput = document.getElementById('apiKey');
+    const modelInput = document.getElementById('modelName');
+    const toastContainer = document.getElementById('toastContainer');
+    const testBtn = document.getElementById('testBtn');
+    const transparentToggle = document.getElementById('transparentToggle');
+    const alwaysOnTopToggle = document.getElementById('alwaysOnTopToggle');
+    const panelPositionSelect = document.getElementById('panelPosition');
+    const panelWidthSlider = document.getElementById('panelWidth');
+    const panelWidthValue = document.getElementById('panelWidthValue');
+    const shortcutDisplay = document.getElementById('shortcutDisplay');
+    const changeShortcutBtn = document.getElementById('changeShortcutBtn');
+    const settingsShortcutDisplay = document.getElementById('settingsShortcutDisplay');
+    const changeSettingsShortcutBtn = document.getElementById('changeSettingsShortcutBtn');
+    const bubbleShortcutDisplay = document.getElementById('bubbleShortcutDisplay');
+    const changeBubbleShortcutBtn = document.getElementById('changeBubbleShortcutBtn');
+    const runInBackgroundToggle = document.getElementById('runInBackgroundToggle');
+    const autoStartToggle = document.getElementById('autoStartToggle');
+    const autoHideDurationInput = document.getElementById('autoHideDuration');
+    const allowDuplicateTextToggle = document.getElementById('allowDuplicateTextToggle');
+    const themeModeButtons = document.querySelectorAll('.theme-mode-group .theme-mode-btn');
+    const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+    const transparencySliderContainer = document.getElementById('transparencySliderContainer');
+    const transparencySlider = document.getElementById('transparencySlider');
+    const transparencyValue = document.getElementById('transparencyValue');
+    const highlightWatcherToggle = document.getElementById('highlightWatcherToggle');
+    const isWindowsPlatform = navigator.userAgent?.toLowerCase().includes('windows');
+    const interfaceLangButtons = document.querySelectorAll('.interface-lang-btn');
+    const aiLangButtons = document.querySelectorAll('.ai-lang-btn');
+    const integrationFreeRadio = document.getElementById('integrationFreeRadio');
+    const integrationCustomRadio = document.getElementById('integrationCustomRadio');
+    const modeCards = document.querySelectorAll('.mode-card');
+    const warningModal = document.getElementById('warningModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const FREE_INTEGRATION_DEFAULT_URL = 'https://api.groq.com/openai/v1/chat/completions';
+    const FREE_INTEGRATION_DEFAULT_MODEL = 'openai/gpt-oss-120b';
+    let freeIntegrationDefaults = null;
+
+    // Toast Notification Function
+    function showToast(title, message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      
+      toast.innerHTML = `
+        <div class="toast-content">
+          <div class="toast-title">${title}</div>
+          <div class="toast-message">${message}</div>
+        </div>
+        <button class="toast-close">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12"></path>
+          </svg>
+        </button>
+      `;
+
+      const closeBtn = toast.querySelector('.toast-close');
+      closeBtn.addEventListener('click', () => {
+        toast.classList.add('hide');
+        setTimeout(() => toast.remove(), 300);
+      });
+
+      toastContainer.appendChild(toast);
+
+      // Trigger reflow
+      toast.offsetHeight;
+      toast.classList.add('show');
+
+      // Auto dismiss
+      setTimeout(() => {
+        if (toast.parentElement) {
+          toast.classList.add('hide');
+          setTimeout(() => toast.remove(), 300);
+        }
+      }, 5000);
+    }
+
+    const translations = {
+      en: {
+        aiModeSectionTitle: 'AI Mode',
+        glanceModeTitle: 'Glance Mode',
+        glanceModeDesc: 'Get quick AI answers based on the information you provide, perfect for when you need fast and concise explanations',
+        panelModeTitle: 'Panel Mode',
+        panelModeDesc: 'Get AI answers and provide direct feedback to AI, suitable for discussion space',
+        settingsTitle: 'Settings',
+        settingsSubtitle: 'Configure your AI assistant',
+        saveSuccessTitle: 'Success',
+        saveSuccessMessage: 'Settings saved successfully!',
+        saveErrorTitle: 'Error',
+        saveErrorMessage: 'Failed to save settings. Please try again.',
+        languageSectionTitle: 'Language',
+        interfaceLanguageLabel: 'Interface Language',
+        interfaceLanguageHint: 'Choose your preferred interface language',
+        aiLanguageLabel: 'AI Language',
+        aiLanguageHint: 'Language for AI responses and interactions',
+        appearanceSectionTitle: 'Appearance',
+        themeModeLabel: 'Theme Mode',
+        themeLightButton: 'Light Mode',
+        themeDarkButton: 'Dark Mode',
+        themeSystemButton: 'Follow System',
+        themeModeHint: 'Use light, dark, or follow your system preference.',
+        transparentPanelLabel: 'Make Panel Transparent',
+        transparentPanelHint: 'Makes the panel semi-transparent',
+        transparencyLevelLabel: 'Transparency Level',
+        transparencySliderHint: 'Lower values increase transparency (30% - 100%).',
+        integrationSectionTitle: 'Integration',
+        apiUrlLabel: 'API URL',
+        apiUrlPlaceholder: 'https://api.openai.com/v1/chat/completions',
+        apiUrlHint: 'Endpoint URL for your AI service (Groq base: https://api.groq.com/openai/v1)',
+        apiKeyLabel: 'API Key',
+        apiKeyPlaceholder: 'sk-...',
+        apiKeyHint: 'Your API key is stored securely on this device.',
+        modelLabel: 'Model',
+        modelPlaceholder: 'openai/gpt-oss-20b',
+        modelHint: 'Example (Groq): openai/gpt-oss-20b · See https://console.groq.com/docs for the latest list.',
+        serviceSectionTitle: 'Service',
+        runInBackgroundLabel: 'Run PingoAI in background when closing the app',
+        runInBackgroundHint: 'The app will stay in system tray instead of fully quitting',
+        autoStartLabel: 'Launch PingoAI automatically on system startup',
+        autoStartHint: 'PingoAI will start automatically when your computer boots up',
+        autoHideDurationLabel: 'Hide Pingo pop up if no interaction for',
+        secondsUnit: 'seconds',
+        autoHideDurationHint: 'Default is 4 seconds.',
+        windowSectionTitle: 'Window Settings',
+        alwaysOnTopLabel: 'Always on Top',
+        alwaysOnTopHint: 'Keep the panel above other windows',
+        panelPositionLabel: 'Panel Position',
+        panelPositionRight: 'Right',
+        panelPositionLeft: 'Left',
+        panelPositionTop: 'Top',
+        panelPositionBottom: 'Bottom',
+        panelSizeLabel: 'Panel Size (300-600px)',
+        panelSizeHint: 'Top/bottom docked panels use this as height.',
+        shortcutsLabel: 'Keyboard Shortcuts',
+        shortcutsHint: 'Customize keyboard shortcuts for quick access',
+        toggleChatLabel: '💡 Toggle Chat Window',
+        toggleChatHint: 'Show or hide the main chat panel',
+        changeShortcutButton: 'Change',
+        openSettingsLabel: '⚙️ Open Settings',
+        openSettingsHint: 'Open the settings window anytime',
+        showBubbleLabel: '🔍 Show AI Bubble',
+        showBubbleHint: 'Show the AI bubble for selected text',
+        textSelectionLabel: 'Text Selection Bubble',
+        textSelectionToggleHint: 'Show bubble automatically when highlighting text (without copying)',
+        textSelectionHint: 'Windows only and requires HighlightWatcher (run "npm run watcher:build").',
+        testConnectionButton: 'Test Connection',
+        saveSettingsButton: 'Apply Settings',
+        testButtonWorking: 'Testing...',
+        testSuccessTitle: 'Connection Successful',
+        testSuccessMessage: 'Connection successful! AI is working.',
+        testErrorTitle: 'Connection Failed',
+        connectionFailedPrefix: 'Connection failed: ',
+        applyFailedPrefix: 'Failed to apply settings: ',
+        listeningLabel: 'Listening...',
+        pressNewShortcutLabel: 'Press new shortcut...',
+        includeLetterMessage: 'Include a letter/number key',
+        unknownErrorLabel: 'Unknown error',
+        glanceModeWarningTitle: 'Glance Mode Requirement',
+        glanceModeWarningMsg: 'Glance Mode requires PingoAI to run in the background to function correctly. This setting cannot be disabled while in Glance Mode.',
+        glanceModeWarningBtn: 'Understood'
+      },
+      id: {
+        aiModeSectionTitle: 'Mode AI',
+        glanceModeTitle: 'Mode Sekilas',
+        glanceModeDesc: 'Dapatkan jawaban AI sekilas informasi yang Anda berikan, cocok untuk Anda butuh penjelasan cepat dan ringkas',
+        panelModeTitle: 'Mode Panel',
+        panelModeDesc: 'Dapatkan jawaban AI dan berikan feedback langsung kepada AI, cocok untuk ruang diskusi',
+        settingsTitle: 'Pengaturan',
+        settingsSubtitle: 'Atur asisten AI Anda',
+        saveSuccessTitle: 'Berhasil',
+        saveSuccessMessage: 'Pengaturan berhasil disimpan!',
+        saveErrorTitle: 'Gagal',
+        saveErrorMessage: 'Gagal menyimpan pengaturan. Coba lagi.',
+        languageSectionTitle: 'Bahasa',
+        interfaceLanguageLabel: 'Bahasa Antarmuka',
+        interfaceLanguageHint: 'Pilih bahasa antarmuka yang Anda inginkan',
+        aiLanguageLabel: 'Bahasa AI',
+        aiLanguageHint: 'Bahasa yang digunakan AI saat merespons',
+        appearanceSectionTitle: 'Tampilan',
+        themeModeLabel: 'Mode Tema',
+        themeLightButton: 'Mode Terang',
+        themeDarkButton: 'Mode Gelap',
+        themeSystemButton: 'Ikuti Sistem',
+        themeModeHint: 'Gunakan tema terang, gelap, atau ikuti preferensi sistem Anda.',
+        transparentPanelLabel: 'Transparankan Panel',
+        transparentPanelHint: 'Membuat panel menjadi semi-transparan',
+        transparencyLevelLabel: 'Tingkat Transparansi',
+        transparencySliderHint: 'Semakin rendah nilainya, semakin transparan (30% - 100%).',
+        integrationSectionTitle: 'Integrasi',
+        apiUrlLabel: 'URL API',
+        apiUrlPlaceholder: 'https://api.openai.com/v1/chat/completions',
+        apiUrlHint: 'Endpoint untuk layanan AI Anda (Groq: https://api.groq.com/openai/v1)',
+        apiKeyLabel: 'API Key',
+        apiKeyPlaceholder: 'sk-...',
+        apiKeyHint: 'API key Anda disimpan secara aman di perangkat ini.',
+        modelLabel: 'Model',
+        modelPlaceholder: 'openai/gpt-oss-20b',
+        modelHint: 'Contoh (Groq): openai/gpt-oss-20b · Lihat https://console.groq.com/docs untuk daftar terbaru.',
+        serviceSectionTitle: 'Layanan',
+        runInBackgroundLabel: 'Biarkan PingoAI berjalan di latar belakang saat keluar dari aplikasi',
+        runInBackgroundHint: 'Aplikasi akan tetap di system tray tanpa benar-benar keluar',
+        autoStartLabel: 'Jalankan PingoAI otomatis saat komputer menyala',
+        autoStartHint: 'PingoAI akan otomatis berjalan saat komputer Anda dinyalakan',
+        autoHideDurationLabel: 'Sembunyikan pop up pingo jika tidak ada interaksi selama',
+        secondsUnit: 'detik',
+        autoHideDurationHint: 'Default adalah 4 detik.',
+        windowSectionTitle: 'Pengaturan Jendela',
+        alwaysOnTopLabel: 'Selalu di Atas',
+        alwaysOnTopHint: 'Panel selalu berada di atas jendela lain',
+        panelPositionLabel: 'Posisi Panel',
+        panelPositionRight: 'Kanan',
+        panelPositionLeft: 'Kiri',
+        panelPositionTop: 'Atas',
+        panelPositionBottom: 'Bawah',
+        panelSizeLabel: 'Ukuran Panel (300-600px)',
+        panelSizeHint: 'Dock atas/bawah menggunakan nilai ini sebagai tinggi.',
+        shortcutsLabel: 'Pintasan Keyboard',
+        shortcutsHint: 'Sesuaikan pintasan keyboard untuk akses cepat',
+        toggleChatLabel: '💡 Tampilkan/Sembunyikan Chat',
+        toggleChatHint: 'Menampilkan atau menyembunyikan panel chat utama',
+        changeShortcutButton: 'Ubah',
+        openSettingsLabel: '⚙️ Buka Pengaturan',
+        openSettingsHint: 'Buka jendela pengaturan kapan saja',
+        showBubbleLabel: '🔍 Tampilkan Bubble AI',
+        showBubbleHint: 'Tampilkan bubble AI untuk teks yang dipilih',
+        textSelectionLabel: 'Bubble Seleksi Teks',
+        textSelectionToggleHint: 'Tampilkan bubble otomatis saat menyorot teks (tanpa copy)',
+        textSelectionHint: 'Hanya tersedia di Windows dan perlu HighlightWatcher (jalankan "npm run watcher:build").',
+        testConnectionButton: 'Tes Koneksi',
+        saveSettingsButton: 'Terapkan',
+        testButtonWorking: 'Sedang tes...',
+        testSuccessTitle: 'Koneksi Berhasil',
+        testSuccessMessage: 'Koneksi berhasil! AI siap digunakan.',
+        testErrorTitle: 'Koneksi Gagal',
+        connectionFailedPrefix: 'Koneksi gagal: ',
+        applyFailedPrefix: 'Gagal menerapkan pengaturan: ',
+        listeningLabel: 'Mendengarkan...',
+        pressNewShortcutLabel: 'Tekan pintasan baru...',
+        includeLetterMessage: 'Sertakan tombol huruf atau angka',
+        unknownErrorLabel: 'Kesalahan tidak diketahui',
+        glanceModeWarningTitle: 'Persyaratan Mode Sekilas',
+        glanceModeWarningMsg: 'Mode Sekilas mengharuskan PingoAI berjalan di latar belakang agar berfungsi dengan benar. Pengaturan ini tidak dapat dinonaktifkan saat dalam Mode Sekilas.',
+        glanceModeWarningBtn: 'Mengerti'
+      }
+    };
+
+    const languageNameMap = {
+      en: {
+        en: 'English',
+        id: 'Bahasa Indonesia'
+      },
+      id: {
+        en: 'Bahasa Inggris',
+        id: 'Bahasa Indonesia'
+      }
+    };
+
+    const languagePreferences = {
+      interfaceLanguage: 'en',
+      aiLanguage: 'en'
+    };
+
+    const originalLanguagePreferences = { ...languagePreferences };
+    let isLanguagePreviewDirty = false;
+
+    const windowPreferences = {
+      dockPosition: 'right',
+      dockSize: 400,
+      transparent: false,
+      alwaysOnTop: false,
+      toggleShortcut: 'CommandOrControl+Alt+A',
+      settingsShortcut: 'CommandOrControl+Shift+S',
+      bubbleShortcut: 'CommandOrControl+Shift+X',
+      opacity: 0.95
+    };
+
+    const textSelectionPreferences = {
+      autoBubbleOnHighlight: false
+    };
+
+    const servicePreferences = {
+      runInBackground: true,
+      autoStart: false,
+      autoHideDuration: 4,
+      allowDuplicateText: false
+    };
+
+    if (highlightWatcherToggle && !isWindowsPlatform) {
+      highlightWatcherToggle.disabled = true;
+      const toggleWrapper = highlightWatcherToggle.closest('.toggle-control');
+      if (toggleWrapper) {
+        toggleWrapper.classList.add('disabled');
+      }
+    }
+
+    let capturingShortcut = false;
+    let shortcutListener = null;
+    let currentShortcutType = null; // 'toggle', 'settings', 'bubble'
+    let themeMode = localStorage.getItem('themeMode') || 'light';
+    let isPreviewingPanelSize = false;
+    let originalPanelSize = 400;
+    let originalPanelPosition = 'right';
+    let aiMode = 'glance';
+
+    setThemeMode(themeMode, false);
+    loadFreeIntegrationDefaults();
+
+    // AI Mode card selection
+    modeCards.forEach(card => {
+      card.addEventListener('click', () => {
+        modeCards.forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        const radio = card.querySelector('input[type="radio"]');
+        if (radio) {
+          radio.checked = true;
+          aiMode = radio.value;
+          
+          // Enforce run in background for Glance Mode
+          if (aiMode === 'glance') {
+            servicePreferences.runInBackground = true;
+            runInBackgroundToggle.checked = true;
+            runInBackgroundToggle.disabled = true;
+            // Add visual indication that it's locked
+            runInBackgroundToggle.closest('.toggle-control')?.classList.add('disabled');
+          } else {
+            runInBackgroundToggle.disabled = false;
+            runInBackgroundToggle.closest('.toggle-control')?.classList.remove('disabled');
+          }
+        }
+      });
+    });
+
+    closeModalBtn.addEventListener('click', () => {
+      warningModal.classList.remove('show');
+    });
+
+    interfaceLangButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const selectedLang = btn.dataset.lang;
+        setInterfaceLanguage(selectedLang);
+      });
+    });
+
+    aiLangButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const selectedLang = btn.dataset.lang;
+        setAILanguage(selectedLang);
+      });
+    });
+
+    // Theme card selection
+    const themeCards = document.querySelectorAll('.theme-card');
+    themeCards.forEach(card => {
+      card.addEventListener('click', () => {
+        const selectedMode = card.dataset.theme;
+        const radio = card.querySelector('input[type="radio"]');
+        if (radio) {
+          radio.checked = true;
+        }
+        
+        // Update selected state
+        themeCards.forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        
+        // Apply theme
+        setThemeMode(selectedMode);
+      });
+    });
+
+    prefersDarkScheme.addEventListener('change', () => {
+      if (themeMode === 'system') {
+        syncBodyTheme();
+      }
+    });
+
+    // Load existing settings
+    window.electronAPI.getSettings().then(async settings => {
+      apiUrlInput.value = settings.apiUrl || 'https://api.openai.com/v1/chat/completions';
+      apiKeyInput.value = settings.apiKey || '';
+      modelInput.value = settings.model || 'gpt-3.5-turbo';
+      
+      // Load theme state
+      const storedThemeMode = settings.themeMode || localStorage.getItem('themeMode') || (settings.darkMode ? 'dark' : 'light');
+      setThemeMode(storedThemeMode);
+      
+      // Load window state from chat window
+      const windowState = await window.electronAPI.getWindowState();
+      if (windowState.success) {
+        // Sync dengan state dari chat window
+        settings.windowSettings = settings.windowSettings || {};
+        settings.windowSettings.transparent = windowState.transparent;
+        settings.windowSettings.alwaysOnTop = windowState.alwaysOnTop;
+        if (windowState.toggleShortcut) {
+          settings.windowSettings.toggleShortcut = windowState.toggleShortcut;
+        }
+        if (windowState.settingsShortcut) {
+          settings.windowSettings.settingsShortcut = windowState.settingsShortcut;
+        }
+        if (windowState.bubbleShortcut) {
+          settings.windowSettings.bubbleShortcut = windowState.bubbleShortcut;
+        }
+      }
+      
+      hydrateWindowPreferences(settings.windowSettings);
+      hydrateSelectionPreferences(settings.selectionSettings);
+      hydrateLanguagePreferences(settings.languageSettings);
+      hydrateServicePreferences(settings.serviceSettings);
+      hydrateAIModePreferences(settings.aiModeSettings);
+      
+      // Load integration type
+      if (settings.integration && settings.integration.type === 'free') {
+        integrationFreeRadio.checked = true;
+        toggleIntegrationFields(true);
+      } else {
+        integrationCustomRadio.checked = true;
+        toggleIntegrationFields(false);
+      }
+
+      if (windowState.success && typeof windowState.highlightWatcherEnabled === 'boolean') {
+        textSelectionPreferences.autoBubbleOnHighlight = windowState.highlightWatcherEnabled;
+        renderSelectionPreferences();
+      }
+    });
+
+    transparentToggle.addEventListener('change', () => {
+      windowPreferences.transparent = transparentToggle.checked;
+      transparencySliderContainer.style.display = transparentToggle.checked ? 'block' : 'none';
+      
+      // Preview transparency on settings window
+      if (transparentToggle.checked) {
+        window.electronAPI.setWindowOpacity(windowPreferences.opacity);
+      } else {
+        window.electronAPI.setWindowOpacity(1.0);
+      }
+    });
+
+    transparencySlider.addEventListener('input', () => {
+      const value = parseFloat(transparencySlider.value);
+      windowPreferences.opacity = value;
+      transparencyValue.textContent = Math.round(value * 100) + '%';
+      
+      // Live preview on settings window
+      if (transparentToggle.checked) {
+        window.electronAPI.setWindowOpacity(value);
+      }
+    });
+
+    alwaysOnTopToggle.addEventListener('change', () => {
+      windowPreferences.alwaysOnTop = alwaysOnTopToggle.checked;
+    });
+
+    panelPositionSelect.addEventListener('change', () => {
+      windowPreferences.dockPosition = panelPositionSelect.value;
+      
+      // Preview position change
+      if (!isPreviewingPanelSize) {
+        originalPanelPosition = windowPreferences.dockPosition;
+      }
+      window.electronAPI.previewPanelSize(windowPreferences.dockSize, windowPreferences.dockPosition);
+    });
+
+    panelWidthSlider.addEventListener('input', () => {
+      const value = clampDockSize(Number(panelWidthSlider.value));
+      windowPreferences.dockSize = value;
+      panelWidthSlider.value = value;
+      panelWidthValue.textContent = `${value}px`;
+      
+      // Start preview mode on first change
+      if (!isPreviewingPanelSize) {
+        isPreviewingPanelSize = true;
+        originalPanelSize = value;
+        originalPanelPosition = windowPreferences.dockPosition;
+      }
+      
+      // Live preview
+      window.electronAPI.previewPanelSize(value, windowPreferences.dockPosition);
+    });
+
+    if (highlightWatcherToggle) {
+      highlightWatcherToggle.addEventListener('change', () => {
+        textSelectionPreferences.autoBubbleOnHighlight = highlightWatcherToggle.checked;
+      });
+    }
+    
+    // Integration type toggle
+    async function loadFreeIntegrationDefaults() {
+      try {
+        const response = await window.electronAPI.getFreeIntegrationDefaults();
+        if (response?.success && response.defaults) {
+          freeIntegrationDefaults = response.defaults;
+          if (integrationFreeRadio.checked) {
+            applyFreeIntegrationDefaults();
+          }
+        } else {
+          console.warn('Free integration defaults unavailable:', response?.error || 'Unknown error');
+        }
+      } catch (error) {
+        console.warn('Failed to load free integration defaults:', error);
+      }
+    }
+
+    function applyFreeIntegrationDefaults() {
+      const defaults = freeIntegrationDefaults || {
+        apiUrl: FREE_INTEGRATION_DEFAULT_URL,
+        apiKey: '',
+        model: FREE_INTEGRATION_DEFAULT_MODEL
+      };
+      apiUrlInput.value = defaults.apiUrl || '';
+      apiKeyInput.value = defaults.apiKey || '';
+      modelInput.value = defaults.model || '';
+    }
+
+    function toggleIntegrationFields(isFree) {
+      const apiUrlGroup = apiUrlInput.closest('.form-group');
+      const apiKeyGroup = apiKeyInput.closest('.form-group');
+      const modelGroup = modelInput.closest('.form-group');
+
+      if (isFree) {
+        if (apiUrlGroup) apiUrlGroup.style.display = 'none';
+        if (apiKeyGroup) apiKeyGroup.style.display = 'none';
+        if (modelGroup) modelGroup.style.display = 'none';
+        applyFreeIntegrationDefaults();
+      } else {
+        if (apiUrlGroup) apiUrlGroup.style.display = 'block';
+        if (apiKeyGroup) apiKeyGroup.style.display = 'block';
+        if (modelGroup) modelGroup.style.display = 'block';
+        
+        apiUrlInput.disabled = false;
+        apiKeyInput.disabled = false;
+        modelInput.disabled = false;
+      }
+    }
+    
+    integrationFreeRadio.addEventListener('change', () => {
+      if (integrationFreeRadio.checked) {
+        toggleIntegrationFields(true);
+      }
+    });
+    
+    integrationCustomRadio.addEventListener('change', () => {
+      if (integrationCustomRadio.checked) {
+        toggleIntegrationFields(false);
+        // Clear inputs as requested
+        apiUrlInput.value = '';
+        apiKeyInput.value = '';
+        modelInput.value = '';
+      }
+    });
+
+    runInBackgroundToggle.addEventListener('change', (e) => {
+      if (aiMode === 'glance' && !runInBackgroundToggle.checked) {
+        // Prevent unchecking in Glance Mode
+        e.preventDefault();
+        runInBackgroundToggle.checked = true;
+        warningModal.classList.add('show');
+        return;
+      }
+      servicePreferences.runInBackground = runInBackgroundToggle.checked;
+    });
+
+    autoStartToggle.addEventListener('change', () => {
+      servicePreferences.autoStart = autoStartToggle.checked;
+    });
+
+    autoHideDurationInput.addEventListener('change', () => {
+      let val = parseInt(autoHideDurationInput.value);
+      if (isNaN(val) || val < 1) val = 4;
+      servicePreferences.autoHideDuration = val;
+    });
+
+    allowDuplicateTextToggle.addEventListener('change', () => {
+      servicePreferences.allowDuplicateText = allowDuplicateTextToggle.checked;
+    });
+
+    changeShortcutBtn.addEventListener('click', () => {
+      startShortcutCapture('toggle', shortcutDisplay, changeShortcutBtn);
+    });
+
+    changeSettingsShortcutBtn.addEventListener('click', () => {
+      startShortcutCapture('settings', settingsShortcutDisplay, changeSettingsShortcutBtn);
+    });
+
+    changeBubbleShortcutBtn.addEventListener('click', () => {
+      startShortcutCapture('bubble', bubbleShortcutDisplay, changeBubbleShortcutBtn);
+    });
+
+    function getTranslation(key) {
+      const lang = languagePreferences.interfaceLanguage || 'en';
+      return translations[lang][key] || translations.en[key] || key;
+    }
+
+    function startShortcutCapture(type, displayElement, buttonElement) {
+      if (capturingShortcut) {
+        return;
+      }
+      capturingShortcut = true;
+      currentShortcutType = type;
+      buttonElement.disabled = true;
+      buttonElement.textContent = getTranslation('listeningLabel');
+      displayElement.textContent = getTranslation('pressNewShortcutLabel');
+      
+      shortcutListener = (event) => {
+        event.preventDefault();
+        if (event.key === 'Escape') {
+          endShortcutCapture(false, displayElement, buttonElement);
+          return;
+        }
+        const accelerator = buildAcceleratorFromEvent(event);
+        if (!accelerator) {
+          displayElement.textContent = getTranslation('includeLetterMessage');
+          return;
+        }
+        
+        // Update the appropriate shortcut
+        if (type === 'toggle') {
+          windowPreferences.toggleShortcut = accelerator;
+        } else if (type === 'settings') {
+          windowPreferences.settingsShortcut = accelerator;
+        } else if (type === 'bubble') {
+          windowPreferences.bubbleShortcut = accelerator;
+        }
+        
+        displayElement.textContent = formatShortcutLabel(accelerator);
+        endShortcutCapture(true, displayElement, buttonElement);
+      };
+      window.addEventListener('keydown', shortcutListener, true);
+    }
+
+    // Test Connection Handler
+    testBtn.addEventListener('click', async () => {
+      const apiUrl = apiUrlInput.value.trim();
+      const apiKey = apiKeyInput.value.trim();
+      const model = modelInput.value.trim();
+      const t = translations[languagePreferences.interfaceLanguage] || translations.en;
+
+      if (!apiUrl || !apiKey || !model) {
+        showToast(t.testErrorTitle, t.connectionFailedPrefix + 'Missing fields', 'error');
+        return;
+      }
+
+      const originalText = testBtn.innerText;
+      testBtn.innerText = t.testButtonWorking;
+      testBtn.disabled = true;
+
+      try {
+        const result = await window.electronAPI.testAiConnection({ apiUrl, apiKey, model });
+        
+        if (result.success) {
+          showToast(t.testSuccessTitle, t.testSuccessMessage, 'success');
+        } else {
+          showToast(t.testErrorTitle, t.connectionFailedPrefix + result.error, 'error');
+        }
+      } catch (error) {
+        showToast(t.testErrorTitle, t.connectionFailedPrefix + error.message, 'error');
+      } finally {
+        testBtn.innerText = originalText;
+        testBtn.disabled = false;
+      }
+    });
+
+    // Save Settings Handler
+    settingsForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const t = translations[languagePreferences.interfaceLanguage] || translations.en;
+
+        const isDark = themeMode === 'dark' || (themeMode === 'system' && prefersDarkScheme.matches);
+
+        const newSettings = {
+          apiUrl: apiUrlInput.value.trim(),
+          apiKey: apiKeyInput.value.trim(),
+          model: modelInput.value.trim(),
+          themeMode: themeMode,
+          darkMode: isDark,
+          windowSettings: {
+            transparent: transparentToggle.checked,
+            alwaysOnTop: alwaysOnTopToggle.checked,
+            dockPosition: panelPositionSelect.value,
+            dockSize: parseInt(panelWidthSlider.value),
+            toggleShortcut: shortcutDisplay.innerText,
+            settingsShortcut: settingsShortcutDisplay.innerText,
+            bubbleShortcut: bubbleShortcutDisplay.innerText,
+            opacity: parseFloat(transparencySlider.value)
+          },
+          textSelection: {
+            autoBubbleOnHighlight: highlightWatcherToggle ? highlightWatcherToggle.checked : false
+          },
+          serviceSettings: {
+            runInBackground: runInBackgroundToggle.checked,
+            autoStart: autoStartToggle.checked,
+            autoHideDuration: parseInt(autoHideDurationInput.value) || 4,
+            allowDuplicateText: allowDuplicateTextToggle.checked
+          },
+          languageSettings: languagePreferences,
+          aiModeSettings: {
+            mode: aiMode
+          },
+          integration: {
+            type: integrationFreeRadio.checked ? 'free' : 'custom'
+          }
+        };
+
+      try {
+        const result = await window.electronAPI.saveSettings(newSettings);
+        if (result.success) {
+          const applyResult = await window.electronAPI.applySettings(newSettings);
+          
+          if (applyResult.success) {
+            // Force theme update if system theme changed
+            if (themeMode === 'system') {
+              syncBodyTheme();
+            }
+            
+            // Persist language
+            persistLanguageLocalStorage();
+            originalLanguagePreferences.interfaceLanguage = languagePreferences.interfaceLanguage;
+            originalLanguagePreferences.aiLanguage = languagePreferences.aiLanguage;
+
+            // Close window immediately on success
+            setTimeout(() => {
+              window.close();
+            }, 100);
+
+          } else {
+            showToast(t.saveErrorTitle, t.applyFailedPrefix + (applyResult.error || 'Unknown error'), 'error');
+          }
+
+        } else {
+          showToast(t.saveErrorTitle, t.saveErrorMessage, 'error');
+        }
+      } catch (error) {
+        console.error('Save error:', error);
+        showToast(t.saveErrorTitle, t.applyFailedPrefix + error.message, 'error');
+      }
+    });
+
+    function hydrateWindowPreferences(preferences = {}) {
+      windowPreferences.dockPosition = normalizeDockPosition(preferences.dockPosition);
+      windowPreferences.dockSize = clampDockSize(preferences.dockSize ?? 400);
+      windowPreferences.transparent = !!preferences.transparent;
+      windowPreferences.alwaysOnTop = !!preferences.alwaysOnTop;
+      windowPreferences.toggleShortcut = preferences.toggleShortcut || 'CommandOrControl+Alt+A';
+      windowPreferences.settingsShortcut = preferences.settingsShortcut || 'CommandOrControl+Shift+S';
+      windowPreferences.bubbleShortcut = preferences.bubbleShortcut || 'CommandOrControl+Shift+X';
+      windowPreferences.opacity = clampOpacity(preferences.opacity ?? 0.95);
+      renderWindowPreferences();
+    }
+
+    function renderWindowPreferences() {
+      transparentToggle.checked = windowPreferences.transparent;
+      alwaysOnTopToggle.checked = windowPreferences.alwaysOnTop;
+      panelPositionSelect.value = windowPreferences.dockPosition;
+      panelWidthSlider.value = windowPreferences.dockSize;
+      panelWidthValue.textContent = `${windowPreferences.dockSize}px`;
+      shortcutDisplay.textContent = formatShortcutLabel(windowPreferences.toggleShortcut);
+      settingsShortcutDisplay.textContent = formatShortcutLabel(windowPreferences.settingsShortcut);
+      bubbleShortcutDisplay.textContent = formatShortcutLabel(windowPreferences.bubbleShortcut);
+      transparencySlider.value = windowPreferences.opacity;
+      transparencyValue.textContent = Math.round(windowPreferences.opacity * 100) + '%';
+      transparencySliderContainer.style.display = windowPreferences.transparent ? 'block' : 'none';
+    }
+
+    function hydrateSelectionPreferences(preferences = {}) {
+      textSelectionPreferences.autoBubbleOnHighlight = !!(preferences && preferences.autoBubbleOnHighlight);
+      renderSelectionPreferences();
+    }
+
+    function renderSelectionPreferences() {
+      if (highlightWatcherToggle) {
+        highlightWatcherToggle.checked = textSelectionPreferences.autoBubbleOnHighlight;
+      }
+    }
+
+    function hydrateServicePreferences(preferences = {}) {
+      servicePreferences.runInBackground = preferences.runInBackground !== false;
+      servicePreferences.autoStart = !!(preferences && preferences.autoStart);
+      servicePreferences.autoHideDuration = preferences.autoHideDuration || 4;
+      servicePreferences.allowDuplicateText = !!(preferences && preferences.allowDuplicateText);
+      renderServicePreferences();
+    }
+
+    function renderServicePreferences() {
+      runInBackgroundToggle.checked = servicePreferences.runInBackground;
+      autoStartToggle.checked = servicePreferences.autoStart;
+      if (autoHideDurationInput) {
+        autoHideDurationInput.value = servicePreferences.autoHideDuration;
+      }
+      if (allowDuplicateTextToggle) {
+        allowDuplicateTextToggle.checked = servicePreferences.allowDuplicateText;
+      }
+    }
+
+    function hydrateAIModePreferences(preferences = {}) {
+      aiMode = preferences.mode || 'glance';
+      renderAIModePreferences();
+      
+      // Initial check for Glance Mode enforcement
+      if (aiMode === 'glance') {
+        servicePreferences.runInBackground = true;
+        runInBackgroundToggle.checked = true;
+        // We don't disable the input here to allow the click event to trigger the warning
+        // But we can visually indicate it's important
+      }
+    }
+
+    function renderAIModePreferences() {
+      modeCards.forEach(card => {
+        const radio = card.querySelector('input[type="radio"]');
+        if (radio && radio.value === aiMode) {
+          card.classList.add('selected');
+          radio.checked = true;
+        } else {
+          card.classList.remove('selected');
+          if (radio) radio.checked = false;
+        }
+      });
+    }
+
+    function clampDockSize(value) {
+      const numericValue = Number(value);
+      if (Number.isNaN(numericValue)) {
+        return 400;
+      }
+      return Math.min(600, Math.max(300, numericValue));
+    }
+
+    function normalizeDockPosition(position) {
+      const allowed = ['left', 'right', 'top', 'bottom'];
+      return allowed.includes(position) ? position : 'right';
+    }
+
+    function clampOpacity(value) {
+      const numericValue = Number(value);
+      if (Number.isNaN(numericValue)) {
+        return 0.95;
+      }
+      return Math.min(1.0, Math.max(0.3, numericValue));
+    }
+
+    function endShortcutCapture(success, displayElement, buttonElement) {
+      capturingShortcut = false;
+      if (buttonElement) {
+        buttonElement.disabled = false;
+        buttonElement.textContent = getTranslation('changeShortcutButton');
+      }
+      if (!success && displayElement) {
+        // Restore original value
+        if (currentShortcutType === 'toggle') {
+          displayElement.textContent = formatShortcutLabel(windowPreferences.toggleShortcut);
+        } else if (currentShortcutType === 'settings') {
+          displayElement.textContent = formatShortcutLabel(windowPreferences.settingsShortcut);
+        } else if (currentShortcutType === 'bubble') {
+          displayElement.textContent = formatShortcutLabel(windowPreferences.bubbleShortcut);
+        }
+      }
+      if (shortcutListener) {
+        window.removeEventListener('keydown', shortcutListener, true);
+        shortcutListener = null;
+      }
+      currentShortcutType = null;
+    }
+
+    function buildAcceleratorFromEvent(event) {
+      const modifiers = [];
+      if (event.ctrlKey || event.metaKey) {
+        modifiers.push('CommandOrControl');
+      }
+      if (event.altKey) {
+        modifiers.push('Alt');
+      }
+      if (event.shiftKey) {
+        modifiers.push('Shift');
+      }
+      const key = normalizeKey(event.key);
+      if (!key) {
+        return null;
+      }
+      return [...new Set([...modifiers, key])].join('+');
+    }
+
+    function normalizeKey(key) {
+      if (!key) {
+        return null;
+      }
+      const upperKey = key.length === 1 ? key.toUpperCase() : key;
+      const specialMap = {
+        'ArrowUp': 'Up',
+        'ArrowDown': 'Down',
+        'ArrowLeft': 'Left',
+        'ArrowRight': 'Right',
+        ' ': 'Space',
+        'Escape': 'Escape',
+        'Enter': 'Enter',
+        'Backspace': 'Backspace',
+        'Delete': 'Delete',
+        'Tab': 'Tab'
+      };
+      if (specialMap[key]) {
+        return specialMap[key];
+      }
+      if (/^F\d{1,2}$/i.test(upperKey)) {
+        return upperKey.toUpperCase();
+      }
+      if (['Shift', 'Control', 'Alt', 'Meta'].includes(key)) {
+        return null;
+      }
+      if (upperKey.length === 1) {
+        return upperKey;
+      }
+      return upperKey.charAt(0).toUpperCase() + upperKey.slice(1);
+    }
+
+    function formatShortcutLabel(accelerator) {
+      if (!accelerator) {
+        return 'Ctrl+Alt+A';
+      }
+      const isMac = navigator.platform?.toLowerCase().includes('mac');
+      return accelerator
+        .replace(/CommandOrControl/g, isMac ? 'Cmd' : 'Ctrl')
+        .replace(/Control/g, 'Ctrl');
+    }
+
+    function setThemeMode(mode, persist = true) {
+      themeMode = mode;
+      if (persist) {
+        localStorage.setItem('themeMode', mode);
+      }
+      syncBodyTheme();
+      renderThemeButtons();
+    }
+
+    function syncBodyTheme() {
+      const shouldUseDark = themeMode === 'dark' || (themeMode === 'system' && prefersDarkScheme.matches);
+      document.body.classList.toggle('dark-mode', shouldUseDark);
+      return shouldUseDark;
+    }
+
+    function renderThemeButtons() {
+      themeModeButtons.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === themeMode);
+      });
+    }
+
+    function setInterfaceLanguage(lang, options = {}) {
+      if (!lang) {
+        return;
+      }
+      const { persist = false, markDirty = true } = options;
+      languagePreferences.interfaceLanguage = lang;
+      applyInterfaceLanguage(lang);
+      renderLanguageButtons();
+      if (persist) {
+        persistLanguageLocalStorage();
+      }
+      if (markDirty) {
+        syncLanguagePreviewState();
+      }
+    }
+
+    function setAILanguage(lang, options = {}) {
+      if (!lang) {
+        return;
+      }
+      const { persist = false, markDirty = true } = options;
+      languagePreferences.aiLanguage = lang;
+      renderLanguageButtons();
+      if (persist) {
+        persistLanguageLocalStorage();
+      }
+      if (markDirty) {
+        syncLanguagePreviewState();
+      }
+    }
+
+    function hydrateLanguagePreferences(preferences = {}) {
+      const storedInterface = preferences.interfaceLanguage || localStorage.getItem('interfaceLanguage') || 'en';
+      const storedAI = preferences.aiLanguage || localStorage.getItem('aiLanguage') || 'en';
+      setInterfaceLanguage(storedInterface, { persist: false, markDirty: false });
+      setAILanguage(storedAI, { persist: false, markDirty: false });
+      originalLanguagePreferences.interfaceLanguage = storedInterface;
+      originalLanguagePreferences.aiLanguage = storedAI;
+      isLanguagePreviewDirty = false;
+    }
+
+    function renderLanguageButtons() {
+      const currentInterfaceLang = languagePreferences.interfaceLanguage;
+      const currentAiLang = languagePreferences.aiLanguage;
+      const labelMap = languageNameMap[currentInterfaceLang] || languageNameMap.en;
+
+      interfaceLangButtons.forEach(btn => {
+        const targetLang = btn.dataset.lang;
+        btn.textContent = labelMap[targetLang] || targetLang.toUpperCase();
+        btn.classList.toggle('active', targetLang === currentInterfaceLang);
+      });
+
+      aiLangButtons.forEach(btn => {
+        const targetLang = btn.dataset.lang;
+        btn.textContent = labelMap[targetLang] || targetLang.toUpperCase();
+        btn.classList.toggle('active', targetLang === currentAiLang);
+      });
+    }
+
+    function applyInterfaceLanguage(lang) {
+      const dictionary = translations[lang] || translations.en;
+      document.documentElement.lang = lang || 'en';
+
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        const localized = dictionary[key] ?? translations.en[key];
+        if (typeof localized === 'string') {
+          el.textContent = localized;
+        }
+      });
+
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        const localized = dictionary[key] ?? translations.en[key];
+        if (typeof localized === 'string') {
+          el.setAttribute('placeholder', localized);
+        }
+      });
+
+
+    }
+
+    function persistLanguageLocalStorage() {
+      localStorage.setItem('interfaceLanguage', languagePreferences.interfaceLanguage);
+      localStorage.setItem('aiLanguage', languagePreferences.aiLanguage);
+    }
+
+    function syncLanguagePreviewState() {
+      isLanguagePreviewDirty =
+        languagePreferences.interfaceLanguage !== originalLanguagePreferences.interfaceLanguage ||
+        languagePreferences.aiLanguage !== originalLanguagePreferences.aiLanguage;
+    }
+
+    function restoreLanguagePreferences() {
+      setInterfaceLanguage(originalLanguagePreferences.interfaceLanguage, { persist: false, markDirty: false });
+      setAILanguage(originalLanguagePreferences.aiLanguage, { persist: false, markDirty: false });
+      isLanguagePreviewDirty = false;
+    }
+
+    function getTranslation(key) {
+      const lang = languagePreferences.interfaceLanguage;
+      return (translations[lang] && translations[lang][key]) ?? translations.en[key] ?? '';
+    }
+  </script>
+</body>
+</html>

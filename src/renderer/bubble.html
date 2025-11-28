@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+  <title>AI Bubble</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      /* Light mode colors */
+      --bg-primary: #ffffff;
+      --bg-secondary: #f3f4f6;
+      --text-primary: #333333;
+      --text-secondary: #6b7280;
+      --border-color: #e5e7eb;
+      --hover-bg: #fff5eb;
+      --input-bg: #ffffff;
+      --input-border: #e5e7eb;
+      --shadow-color: rgba(0, 0, 0, 0.15);
+      --orange: #ff6b35;
+      --orange-hover: #ff5722;
+    }
+
+    body.dark-mode {
+      /* Dark mode colors */
+      --bg-primary: #374151;
+      --bg-secondary: #1f2937;
+      --text-primary: #f9fafb;
+      --text-secondary: #9ca3af;
+      --border-color: #4b5563;
+      --hover-bg: #3d2817;
+      --input-bg: #1f2937;
+      --input-border: #4b5563;
+      --shadow-color: rgba(0, 0, 0, 0.3);
+    }
+
+    body {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        Oxygen, Ubuntu, Cantarell, sans-serif;
+      transition: background-color 0.3s ease;
+    }
+
+    .bubble-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 10px;
+      opacity: 1;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    .bubble-container.fade-out {
+      opacity: 0;
+      transform: scale(0.95);
+      pointer-events: none;
+    }
+
+    .ai-bubble {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--orange) 0%, var(--orange-hover) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+      transition: all 0.3s ease;
+    }
+
+    .ai-bubble:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 16px rgba(255, 107, 53, 0.6);
+    }
+
+    .ai-bubble:active {
+      transform: scale(1.05);
+    }
+
+    .ai-bubble-logo {
+      width: 32px;
+      height: 32px;
+      object-fit: cover;
+    }
+
+    .ai-icon {
+      width: 28px;
+      height: 28px;
+      fill: white;
+    }
+
+    .popup-menu {
+      position: absolute;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.95);
+      background: var(--bg-primary);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px var(--shadow-color);
+      padding: 8px;
+      min-width: 200px;
+      opacity: 0;
+      visibility: hidden;
+      z-index: 1000;
+      transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s, background 0.3s ease;
+      border: 1px solid var(--border-color);
+    }
+
+    .popup-menu.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) scale(1);
+    }
+
+    .menu-item {
+      padding: 12px 16px;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: background 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--text-primary);
+    }
+
+    .menu-item:hover {
+      background: var(--hover-bg);
+    }
+
+    .menu-item svg {
+      width: 18px;
+      height: 18px;
+      fill: var(--orange);
+    }
+
+    .translate-submenu {
+      position: absolute;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.95);
+      background: var(--bg-primary);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px var(--shadow-color);
+      padding: 8px;
+      min-width: 200px;
+      opacity: 0;
+      visibility: hidden;
+      z-index: 1001;
+      transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s, background 0.3s ease;
+      border: 1px solid var(--border-color);
+    }
+
+    .translate-submenu.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) scale(1);
+    }
+
+    .translate-lang-item {
+      padding: 12px 16px;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: background 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--text-primary);
+    }
+
+    .translate-lang-item:hover {
+      background: var(--hover-bg);
+    }
+
+    .translate-lang-item .flag {
+      font-size: 18px;
+    }
+
+    .translate-custom-container {
+      padding: 8px;
+      border-top: 1px solid var(--border-color);
+      margin-top: 4px;
+    }
+
+    .translate-custom-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .translate-custom-input {
+      width: 100%;
+      padding: 10px 40px 10px 12px;
+      border: 2px solid var(--input-border);
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: inherit;
+      transition: border-color 0.2s, background 0.3s ease, color 0.3s ease;
+      background: var(--input-bg);
+      color: var(--text-primary);
+      resize: none;
+      min-height: 40px;
+      max-height: 150px;
+      line-height: 1.4;
+      overflow-y: auto;
+    }
+
+    .translate-custom-input:focus {
+      outline: none;
+      border-color: var(--orange);
+    }
+
+    .translate-custom-input::placeholder {
+      color: var(--text-secondary);
+    }
+
+    .send-translate-btn {
+      position: absolute;
+      right: 6px;
+      width: 28px;
+      height: 28px;
+      background: var(--orange);
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+
+    .send-translate-btn:hover {
+      background: var(--orange-hover);
+    }
+
+    .send-translate-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: white;
+    }
+
+    .custom-command-container {
+      padding: 8px;
+      border-top: 1px solid var(--border-color);
+      margin-top: 4px;
+    }
+
+    .custom-command-wrapper {
+      position: relative;
+      display: flex;
+      align-items: flex-start;
+    }
+
+    .custom-command-input {
+      width: 100%;
+      padding: 10px 40px 10px 12px;
+      border: 2px solid var(--input-border);
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: inherit;
+      transition: border-color 0.2s, background 0.3s ease, color 0.3s ease;
+      background: var(--input-bg);
+      color: var(--text-primary);
+      resize: none;
+      min-height: 40px;
+      max-height: 150px;
+      line-height: 1.4;
+      overflow-y: auto;
+    }
+
+    .custom-command-input:focus {
+      outline: none;
+      border-color: var(--orange);
+    }
+
+    .custom-command-input::placeholder {
+      color: var(--text-secondary);
+    }
+
+    .send-custom-btn {
+      position: absolute;
+      right: 6px;
+      top: 6px;
+      width: 28px;
+      height: 28px;
+      background: var(--orange);
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+
+    .send-custom-btn:hover {
+      background: var(--orange-hover);
+    }
+
+    .send-custom-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: white;
+    }
+
+    .menu-divider {
+      height: 1px;
+      background: var(--border-color);
+      margin: 4px 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bubble-container">
+    <div class="ai-bubble" id="aiBubble">
+      <img src="../../assets/bubble_ai.png" alt="AI" class="ai-bubble-logo" />
+    </div>
+
+    <div class="popup-menu" id="popupMenu">
+      <div class="menu-item" data-action="explain">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z" />
+        </svg>
+        <span data-en="Explain" data-id="Jelaskan">Jelaskan</span>
+      </div>
+      <div class="menu-item" data-action="summarize">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z" />
+        </svg>
+        <span data-en="Summarize" data-id="Ringkaskan">Ringkaskan</span>
+      </div>
+      <div class="menu-item" data-action="formalize">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M14 17H4v2h10v-2zm6-8H4v2h16V9zM4 15h16v-2H4v2zM4 5v2h16V5H4z" />
+        </svg>
+        <span data-en="Formalize" data-id="Buat Formal">Buat Formal</span>
+      </div>
+      <div class="menu-item" data-action="bullet-points">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M4 10.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zm0-6c-.83 0-1.5.67-1.5 1.5S3.17 7.5 4 7.5 5.5 6.83 5.5 6 4.83 4.5 4 4.5zm0 12c-.83 0-1.5.68-1.5 1.5s.68 1.5 1.5 1.5 1.5-.68 1.5-1.5-.67-1.5-1.5-1.5zM7 19h14v-2H7v2zm0-6h14v-2H7v2zm0-8v2h14V5H7z" />
+        </svg>
+        <span data-en="Bullet Points" data-id="Buat Point">Buat Point</span>
+      </div>
+      <div class="menu-item" id="translateMenuItem" data-action="translate">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z" />
+        </svg>
+        <span data-en="Translate" data-id="Terjemahkan">Translate</span>
+      </div>
+
+      <div class="menu-divider"></div>
+
+      <div class="custom-command-container">
+        <div class="custom-command-wrapper">
+          <textarea class="custom-command-input" id="customCommandInput" placeholder="Perintah lainnya..."
+            data-en-placeholder="Other commands..." data-id-placeholder="Perintah lainnya..." rows="1"></textarea>
+          <button class="send-custom-btn" id="sendCustomBtn">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Translate Submenu -->
+    <div class="translate-submenu" id="translateSubmenu">
+      <div class="translate-lang-item" data-lang="English">
+        <span class="flag">🇬🇧</span>
+        <span data-en="English" data-id="Inggris">English</span>
+      </div>
+      <div class="translate-lang-item" data-lang="Indonesian">
+        <span class="flag">🇮🇩</span>
+        <span data-en="Indonesian" data-id="Indonesia">Indonesia</span>
+      </div>
+      <div class="translate-lang-item" data-lang="Japanese">
+        <span class="flag">🇯🇵</span>
+        <span data-en="Japanese" data-id="Jepang">Japan</span>
+      </div>
+
+      <div class="translate-custom-container">
+        <div class="translate-custom-wrapper">
+          <textarea class="translate-custom-input" id="translateCustomInput" placeholder="Bahasa lainnya..."
+            data-en-placeholder="Other languages..." data-id-placeholder="Bahasa lainnya..." rows="1"></textarea>
+          <button class="send-translate-btn" id="sendTranslateBtn">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const aiBubble = document.getElementById("aiBubble");
+    const popupMenu = document.getElementById("popupMenu");
+    const translateMenuItem = document.getElementById("translateMenuItem");
+    const translateSubmenu = document.getElementById("translateSubmenu");
+    const translateCustomInput = document.getElementById(
+      "translateCustomInput"
+    );
+    const sendTranslateBtn = document.getElementById("sendTranslateBtn");
+    const customCommandInput = document.getElementById("customCommandInput");
+    const sendCustomBtn = document.getElementById("sendCustomBtn");
+    const bubbleContainer = document.querySelector(".bubble-container");
+
+    const FADE_TIMEOUT_MS = 220;
+    let AUTO_HIDE_DELAY_MS = 4000; // Default 4 seconds
+    let hideBubblePromise = null;
+    let inactivityTimer = null;
+    let autoHideDisabled = false;
+
+    // Load settings (theme & language)
+    async function loadSettings() {
+      try {
+        const settings = await window.electronAPI.getSettings();
+
+        // Apply Theme
+        const isDarkMode = !!settings.darkMode;
+        document.body.classList.toggle('dark-mode', isDarkMode);
+
+        // Apply Language
+        const language = settings.languageSettings?.interfaceLanguage || "en";
+        applyLanguage(language);
+
+      } catch (error) {
+        console.error('[Bubble] Error loading settings:', error);
+      }
+    }
+
+    function applyLanguage(lang) {
+      // Update text content
+      document.querySelectorAll("[data-en][data-id]").forEach((el) => {
+        if (lang === "en") {
+          el.textContent = el.getAttribute("data-en");
+        } else {
+          el.textContent = el.getAttribute("data-id");
+        }
+      });
+
+      // Update placeholders
+      document.querySelectorAll("[data-en-placeholder][data-id-placeholder]").forEach((el) => {
+        if (lang === "en") {
+          el.placeholder = el.getAttribute("data-en-placeholder");
+        } else {
+          el.placeholder = el.getAttribute("data-id-placeholder");
+        }
+      });
+    }
+
+    loadSettings();
+
+    // Auto-resize textarea function
+    function autoResizeTextarea(textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
+    }
+
+    // Setup auto-resize for custom command input
+    customCommandInput.addEventListener('input', function () {
+      autoResizeTextarea(this);
+    });
+
+    // Setup auto-resize for translate custom input
+    translateCustomInput.addEventListener('input', function () {
+      autoResizeTextarea(this);
+    });
+
+    function showPopupMenu() {
+      popupMenu.classList.add("show");
+      translateSubmenu.classList.remove("show");
+    }
+
+    function clearInactivityTimer() {
+      if (!inactivityTimer) {
+        return;
+      }
+      clearTimeout(inactivityTimer);
+      inactivityTimer = null;
+    }
+
+    function scheduleAutoHide() {
+      if (autoHideDisabled) {
+        console.log("[Bubble] Auto-hide disabled");
+        return;
+      }
+      clearInactivityTimer();
+      inactivityTimer = setTimeout(() => {
+        hideBubbleWithFade("auto-hide");
+      }, AUTO_HIDE_DELAY_MS);
+    }
+
+    function isInsideInteractiveArea(node) {
+      if (!node) {
+        return false;
+      }
+      const interactiveRoots = [aiBubble, popupMenu, translateSubmenu];
+      return interactiveRoots.some(
+        (root) => root && (root === node || root.contains(node))
+      );
+    }
+
+    function hasFocusedInteractiveElement() {
+      return isInsideInteractiveArea(document.activeElement);
+    }
+
+    function setupInactivityWatcher() {
+      document.addEventListener("pointerover", (event) => {
+        if (isInsideInteractiveArea(event.target)) {
+          clearInactivityTimer();
+        }
+      });
+
+      document.addEventListener("pointerout", (event) => {
+        if (
+          isInsideInteractiveArea(event.target) &&
+          !isInsideInteractiveArea(event.relatedTarget) &&
+          !hasFocusedInteractiveElement()
+        ) {
+          scheduleAutoHide();
+        }
+      });
+
+      document.addEventListener("focusin", (event) => {
+        if (isInsideInteractiveArea(event.target)) {
+          clearInactivityTimer();
+        }
+      });
+
+      document.addEventListener("focusout", (event) => {
+        if (
+          isInsideInteractiveArea(event.target) &&
+          !isInsideInteractiveArea(event.relatedTarget)
+        ) {
+          scheduleAutoHide();
+        }
+      });
+
+      scheduleAutoHide();
+    }
+
+    function hideBubbleWithFade(reason = "default") {
+      if (hideBubblePromise) {
+        return hideBubblePromise;
+      }
+
+      clearInactivityTimer();
+
+      if (!bubbleContainer) {
+        return window.electronAPI.hideBubble({ reason });
+      }
+
+      hideBubblePromise = new Promise((resolve) => {
+        let completed = false;
+
+        const finalizeHide = async () => {
+          if (completed) {
+            return;
+          }
+          completed = true;
+          bubbleContainer.removeEventListener(
+            "transitionend",
+            onTransitionEnd
+          );
+          await window.electronAPI.hideBubble({ reason });
+          resolve();
+        };
+
+        const onTransitionEnd = (event) => {
+          if (event.propertyName === "opacity") {
+            finalizeHide();
+          }
+        };
+
+        popupMenu.classList.remove("show");
+        translateSubmenu.classList.remove("show");
+
+        requestAnimationFrame(() => {
+          bubbleContainer.classList.add("fade-out");
+        });
+
+        bubbleContainer.addEventListener("transitionend", onTransitionEnd);
+        setTimeout(finalizeHide, FADE_TIMEOUT_MS);
+      });
+
+      return hideBubblePromise;
+    }
+
+    aiBubble.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (popupMenu.classList.contains("show")) {
+        popupMenu.classList.remove("show");
+        translateSubmenu.classList.remove("show");
+      } else {
+        showPopupMenu();
+      }
+    });
+
+    document.addEventListener("click", (e) => {
+      if (
+        !popupMenu.contains(e.target) &&
+        !aiBubble.contains(e.target) &&
+        !translateSubmenu.contains(e.target)
+      ) {
+        popupMenu.classList.remove("show");
+        translateSubmenu.classList.remove("show");
+        hideBubbleWithFade("auto-hide");
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" || event.key === "Esc") {
+        hideBubbleWithFade("auto-hide");
+      }
+    });
+
+    // Toggle translate submenu when clicking translate menu
+    translateMenuItem.addEventListener("click", (e) => {
+      e.stopPropagation();
+      popupMenu.classList.remove("show");
+      translateSubmenu.classList.add("show");
+    });
+
+    // Handle preset language selection
+    document.querySelectorAll(".translate-lang-item").forEach((item) => {
+      item.addEventListener("click", async () => {
+        const lang = item.dataset.lang;
+        console.log("[Bubble] Translate selected:", lang);
+
+        // Hide UI immediately
+        if (bubbleContainer) bubbleContainer.style.opacity = '0';
+
+        await window.electronAPI.sendTextAction("translate", lang);
+      });
+    });
+
+    // Handle custom translate language
+    async function sendCustomTranslate() {
+      const customLang = translateCustomInput.value.trim();
+      if (customLang) {
+        console.log("[Bubble] Custom translate:", customLang);
+
+        // Hide UI immediately
+        if (bubbleContainer) bubbleContainer.style.opacity = '0';
+
+        await window.electronAPI.sendTextAction("translate", customLang);
+
+        // Reset textarea
+        translateCustomInput.value = '';
+        translateCustomInput.style.height = 'auto';
+      }
+    }
+
+    sendTranslateBtn.addEventListener("click", sendCustomTranslate);
+
+    translateCustomInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendCustomTranslate();
+      }
+    });
+
+    // Handle custom command
+    async function sendCustomCommand() {
+      const customCommand = customCommandInput.value.trim();
+      if (customCommand) {
+        console.log("[Bubble] Custom command:", customCommand);
+
+        // Hide UI immediately
+        if (bubbleContainer) bubbleContainer.style.opacity = '0';
+
+        await window.electronAPI.sendTextAction("custom", customCommand);
+
+        // Reset textarea
+        customCommandInput.value = '';
+        customCommandInput.style.height = 'auto';
+      }
+    }
+
+    sendCustomBtn.addEventListener("click", sendCustomCommand);
+
+    customCommandInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendCustomCommand();
+      }
+    });
+
+    // Handle other menu items (explain, summarize, formalize, bullet-points)
+    document.querySelectorAll(".menu-item").forEach((item) => {
+      if (item.id !== "translateMenuItem") {
+        item.addEventListener("click", async () => {
+          const action = item.dataset.action;
+          console.log("[Bubble] Menu action selected:", action);
+
+          // Hide UI immediately
+          if (bubbleContainer) bubbleContainer.style.opacity = '0';
+
+          // Send the action to main process
+          await window.electronAPI.sendTextAction(action);
+        });
+      }
+    });
+
+    if (window.electronAPI?.onAutoOpenMenu) {
+      window.electronAPI.onAutoOpenMenu(() => {
+        showPopupMenu();
+      });
+    }
+
+    if (window.electronAPI?.onDisableAutoHide) {
+      window.electronAPI.onDisableAutoHide(() => {
+        console.log("[Bubble] Disabling auto-hide via IPC");
+        autoHideDisabled = true;
+        clearInactivityTimer();
+      });
+    }
+
+    if (window.electronAPI?.onBubbleSettings) {
+      window.electronAPI.onBubbleSettings((settings) => {
+        if (settings && settings.autoHideDuration) {
+          console.log("[Bubble] Updating auto-hide duration:", settings.autoHideDuration);
+          AUTO_HIDE_DELAY_MS = settings.autoHideDuration;
+          // Reset timer with new duration if active
+          if (!autoHideDisabled && !popupMenu.classList.contains("show")) {
+            scheduleAutoHide();
+          }
+        }
+      });
+    }
+
+    setupInactivityWatcher();
+  </script>
+</body>
+
+</html>

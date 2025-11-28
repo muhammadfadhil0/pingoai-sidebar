@@ -1,0 +1,31 @@
+# Ignore node modules
+node_modules/
+
+# Ignore .NET build artifacts
+native/HighlightWatcher/bin/
+native/HighlightWatcher/obj/
+
+# Ignore build output
+dist/
+build/
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignore logs
+*.log
+npm-debug.log*
+
+# Ignore environment files
+.env
+.env.local
+
+# Ignore sensitive integration config
+config/free-integration.json

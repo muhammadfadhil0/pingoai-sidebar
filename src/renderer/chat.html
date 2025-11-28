@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>PingoAI Chat</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      /* Light mode colors */
+      --bg-primary: #ffffff;
+      --bg-secondary: #f3f4f6;
+      --bg-header: #ffffff;
+      --text-primary: #1f2937;
+      --text-secondary: #6b7280;
+      --border-color: #e5e7eb;
+      --message-user-bg: #fff5eb;
+      --message-user-text: #1f2937;
+      --message-ai-bg: #f3f4f6;
+      --message-ai-text: #1f2937;
+      --input-bg: #ffffff;
+      --input-border: #d1d5db;
+      --shadow-color: rgba(0, 0, 0, 0.1);
+      --orange: #ff6b35;
+      --orange-hover: #ff5722;
+      --orange-light: #fff5eb;
+    }
+
+    body.dark-mode {
+      /* Dark mode colors */
+      --bg-primary: #1f2937;
+      --bg-secondary: #111827;
+      --bg-header: #111827;
+      --text-primary: #f9fafb;
+      --text-secondary: #9ca3af;
+      --border-color: #374151;
+      --message-user-bg: #3d2817;
+      --message-user-text: #f9fafb;
+      --message-ai-bg: #374151;
+      --message-ai-text: #f9fafb;
+      --input-bg: #374151;
+      --input-border: #4b5563;
+      --shadow-color: rgba(0, 0, 0, 0.3);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: var(--bg-primary);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: background-color 0.3s ease;
+    }
+
+    .header {
+      background: var(--bg-header);
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      -webkit-app-region: drag;
+      box-shadow: 0 1px 3px var(--shadow-color);
+    }
+
+    .header .logo {
+      width: 5rem;
+      height: 1.5rem;
+      object-fit:fill;
+      flex-shrink: 0;
+    }
+
+    .header h1 {
+      color: var(--text-primary);
+      font-size: 18px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header h1 svg {
+      fill: var(--orange);
+    }
+
+    .header-buttons {
+      display: flex;
+      gap: 8px;
+      -webkit-app-region: no-drag;
+    }
+
+    .header-btn {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: var(--bg-secondary);
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .header-btn:hover {
+      background: var(--border-color);
+    }
+
+    .header-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .header-btn svg {
+      width: 18px;
+      height: 18px;
+      fill: var(--text-primary);
+    }
+
+    .header-btn.theme-toggle svg {
+      fill: var(--orange);
+    }
+
+    .header-btn.pin-btn.active svg {
+      fill: var(--orange);
+    }
+
+    .menu-button {
+      position: relative;
+    }
+
+    .dropdown-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px var(--shadow-color);
+      min-width: 200px;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-10px);
+      transition: all 0.3s ease;
+      z-index: 1000;
+      overflow: hidden;
+    }
+
+    .dropdown-menu.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      border: none;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+      color: var(--text-primary);
+      font-size: 14px;
+    }
+
+    .dropdown-item:hover {
+      background: var(--border-color);
+    }
+
+    .dropdown-item svg {
+      width: 18px;
+      height: 18px;
+      fill: var(--text-primary);
+      flex-shrink: 0;
+    }
+
+    .dropdown-item.theme-item svg,
+    .dropdown-item.pin-item.active svg {
+      fill: var(--orange);
+    }
+
+    .dropdown-divider {
+      height: 1px;
+      background: var(--border-color);
+      margin: 4px 0;
+    }
+
+    .chat-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      background: var(--bg-primary);
+    }
+
+    .chat-container::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .chat-container::-webkit-scrollbar-track {
+      background: var(--bg-secondary);
+    }
+
+    .chat-container::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 4px;
+    }
+
+    .chat-container::-webkit-scrollbar-thumb:hover {
+      background: var(--orange);
+    }
+
+    .message {
+      max-width: 85%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      word-wrap: break-word;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background: var(--message-user-bg);
+      color: var(--message-user-text);
+      margin-left: auto;
+      border: 1px solid var(--orange);
+    }
+
+    .message.ai {
+      align-self: flex-start;
+      background: var(--message-ai-bg);
+      color: var(--message-ai-text);
+      border: 1px solid var(--border-color);
+      line-height: 1.6;
+    }
+
+    .message.ai p {
+      margin: 0 0 10px 0;
+    }
+
+    .message.ai p:last-child {
+      margin-bottom: 0;
+    }
+
+    .message.ai ul, .message.ai ol {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+
+    .message.ai li {
+      margin: 4px 0;
+    }
+
+    .message.ai code {
+      background: rgba(0, 0, 0, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+    }
+
+    .message.ai pre {
+      background: rgba(0, 0, 0, 0.1);
+      padding: 12px;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 8px 0;
+    }
+
+    .message.ai pre code {
+      background: transparent;
+      padding: 0;
+    }
+
+    .message.ai blockquote {
+      border-left: 3px solid var(--orange);
+      padding-left: 12px;
+      margin: 8px 0;
+      opacity: 0.8;
+    }
+
+    .message.ai strong {
+      font-weight: 600;
+      color: var(--orange);
+    }
+
+    .message.ai h1, .message.ai h2, .message.ai h3 {
+      margin: 12px 0 8px 0;
+      color: var(--orange);
+    }
+
+    .message.error {
+      align-self: center;
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .typing-indicator {
+      align-self: flex-start;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: var(--message-ai-bg);
+      border: 1px solid var(--border-color);
+      display: none;
+    }
+
+    .typing-indicator.show {
+      display: block;
+    }
+
+    .typing-dots {
+      display: flex;
+      gap: 4px;
+    }
+
+    .typing-dots span {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--orange);
+      animation: typing 1.4s infinite;
+    }
+
+    .typing-dots span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .typing-dots span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes typing {
+      0%, 60%, 100% {
+        opacity: 0.3;
+        transform: translateY(0);
+      }
+      30% {
+        opacity: 1;
+        transform: translateY(-6px);
+      }
+    }
+
+    .input-container {
+      padding: 20px;
+      background: var(--bg-header);
+      border-top: 1px solid var(--border-color);
+      box-shadow: 0 -1px 3px var(--shadow-color);
+    }
+
+    .input-wrapper {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    #messageInput {
+      flex: 1;
+      padding: 12px 16px;
+      border: 2px solid var(--input-border);
+      border-radius: 12px;
+      background: var(--input-bg);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: inherit;
+      resize: none;
+      max-height: 120px;
+      min-height: 44px;
+    }
+
+    #messageInput:focus {
+      outline: none;
+      border-color: var(--orange);
+      box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+    }
+
+    #sendBtn {
+      padding: 12px 24px;
+      background: var(--orange);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 14px;
+    }
+
+    #sendBtn:hover:not(:disabled) {
+      background: var(--orange-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+    }
+
+    #sendBtn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .welcome-message {
+      text-align: center;
+      color: var(--text-primary);
+      padding: 20px 20px;
+      opacity: 0.9;
+    }
+
+    .welcome-message h2 {
+      font-size: 24px;
+      margin-bottom: 10px;
+      color: var(--text-primary);
+      text-align: left;
+    }
+
+    .welcome-message p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      text-align: left;
+    }
+
+    .usage-guide {
+      margin-top: 20px;
+      font-size: 13px;
+      line-height: 1.7;
+      text-align: left;
+    }
+
+    .usage-guide strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+    }
+
+    .usage-list {
+      margin-left: 20px;
+      padding-left: 4px;
+      color: var(--text-secondary);
+    }
+
+    .usage-list li {
+      list-style: decimal;
+      margin-bottom: 6px;
+    }
+
+    .usage-list li:last-child {
+      margin-bottom: 0;
+    }
+
+    .highlight-shortcut {
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 0 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img src="../../assets/logo.png" alt="PingoAI Logo" class="logo">
+    <div class="header-buttons">
+      <div class="menu-button">
+        <button class="header-btn" id="menuBtn" data-i18n-title="menuTooltip" title="Menu">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+          </svg>
+        </button>
+        <div class="dropdown-menu" id="dropdownMenu">
+          <button class="dropdown-item theme-item" id="themeToggleItem">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="sun-icon">
+              <path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/>
+            </svg>
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="moon-icon" style="display: none;">
+              <path d="M9 2c-1.05 0-2.05.16-3 .46 4.06 1.27 7 5.06 7 9.54 0 4.48-2.94 8.27-7 9.54.95.3 1.95.46 3 .46 5.52 0 10-4.48 10-10S14.52 2 9 2z"/>
+            </svg>
+            <span id="themeLabel">Light Mode</span>
+          </button>
+          <button class="dropdown-item pin-item" id="pinToggleItem">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="pin-icon">
+              <path d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/>
+            </svg>
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="unpin-icon" style="display: none;">
+              <path d="M14 4v5c0 1.12.37 2.16 1 3H9c.65-.86 1-1.9 1-3V4h4m3-2H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3V4h1c.55 0 1-.45 1-1s-.45-1-1-1z"/>
+            </svg>
+            <span id="pinLabel">Pin Window</span>
+          </button>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item" id="settingsMenuItem">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+            </svg>
+            <span data-i18n="menuSettingsLabel">Settings</span>
+          </button>
+          <button class="dropdown-item" id="clearMenuItem">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+            </svg>
+            <span data-i18n="menuClearChatLabel">Clear Chat</span>
+          </button>
+        </div>
+      </div>
+      <button class="header-btn" id="minimizeBtn" data-i18n-title="minimizeTooltip" title="Minimize">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M19 13H5v-2h14v2z"/>
+        </svg>
+      </button>
+      <button class="header-btn" id="closeBtn" title="Hide (Ctrl+Alt+A)">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="chat-container" id="chatContainer">
+    <div class="welcome-message">
+      <h2 data-i18n="welcomeTitle">How can I assist you today?</h2>
+      <div class="usage-guide">
+        <strong data-i18n="usageTitle">📖 Cara Penggunaan:</strong>
+        <ol class="usage-list">
+          <li data-i18n="usageStepCopy">Ctrl+C: Copy teks yang ingin diproses</li>
+          <li>
+            <span data-i18n="usageStepBubblePrefix">Tekan</span>
+            <span class="highlight-shortcut" id="bubbleShortcutHint">Ctrl+S</span>
+            <span data-i18n="usageStepBubbleSuffix">untuk menampilkan popup PingoAI</span>
+          </li>
+          <li data-i18n="usageStepChooseTool">Pilih alat yang ingin kamu gunakan</li>
+          <li>
+            <span data-i18n="usageStepTogglePrefix">Gunakan</span>
+            <span class="highlight-shortcut" id="toggleShortcutHint">Ctrl+Alt+A</span>
+            <span data-i18n="usageStepToggleSuffix">untuk buka/tutup chat window</span>
+          </li>
+        </ol>
+      </div>
+    </div>
+    <div class="typing-indicator" id="typingIndicator">
+      <div class="typing-dots">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-container">
+    <div class="input-wrapper">
+      <textarea 
+        id="messageInput" 
+        placeholder="Type your message here..."
+        data-i18n-placeholder="messagePlaceholder"
+        rows="1"
+      ></textarea>
+      <button id="sendBtn" data-i18n="sendButton">Send</button>
+    </div>
+  </div>
+
+  <script>
+    const chatContainer = document.getElementById('chatContainer');
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const typingIndicator = document.getElementById('typingIndicator');
+    const closeBtn = document.getElementById('closeBtn');
+    const minimizeBtn = document.getElementById('minimizeBtn');
+    const shortcutHint = document.getElementById('toggleShortcutHint');
+    const bubbleShortcutHint = document.getElementById('bubbleShortcutHint');
+    
+    // Menu dropdown elements
+    const menuBtn = document.getElementById('menuBtn');
+    const dropdownMenu = document.getElementById('dropdownMenu');
+    const themeToggleItem = document.getElementById('themeToggleItem');
+    const pinToggleItem = document.getElementById('pinToggleItem');
+    const settingsMenuItem = document.getElementById('settingsMenuItem');
+    const clearMenuItem = document.getElementById('clearMenuItem');
+    const themeLabel = document.getElementById('themeLabel');
+    const pinLabel = document.getElementById('pinLabel');
+
+    const languagePreferences = {
+      interfaceLanguage: 'en',
+      aiLanguage: 'en'
+    };
+
+    let isDarkMode = false;
+    let currentPinState = false;
+    let currentToggleShortcutLabel = 'Ctrl+Alt+A';
+    let runInBackgroundEnabled = true;
+
+    const translations = {
+      en: {
+        windowTitle: 'PingoAI Chat',
+        appTitle: 'PingoAI',
+        menuTooltip: 'Menu',
+        minimizeTooltip: 'Minimize',
+        menuSettingsLabel: 'Settings',
+        menuClearChatLabel: 'Clear Chat',
+        welcomeTitle: 'How can I assist you today?',
+        usageTitle: '📖 How to Use',
+        usageStepCopy: 'Copy the text you want to process',
+        usageStepBubblePrefix: 'Press',
+        usageStepBubbleSuffix: 'to show the PingoAI popup if it does not appear automatically',
+        usageStepChooseTool: 'Choose the tool you want to use',
+        usageStepTogglePrefix: 'Use',
+        usageStepToggleSuffix: 'to open or close the chat window',
+        messagePlaceholder: 'Type your message here...',
+        sendButton: 'Send',
+        themeLightLabel: 'Light Mode',
+        themeDarkLabel: 'Dark Mode',
+        pinWindowLabel: 'Pin Window',
+        unpinWindowLabel: 'Unpin Window',
+        alwaysOnTopLabel: 'Always On Top',
+        clearChatConfirmMessage: 'Clear all conversations? The AI will forget previous context.',
+        noApiKeyWarning: '⚠️ Please configure your API key in settings (Ctrl+Shift+S).',
+        sendErrorPrefix: '❌ Failed to send message:',
+        processErrorPrefix: '❌ Failed to process:',
+        genericErrorPrefix: '❌ Error:',
+        hideButtonTitle: 'Hide ({{shortcut}})',
+        quitButtonTitle: 'Quit ({{shortcut}})',
+        selectedTextLabel: 'Selected text:\n{{preview}}',
+        translateSelectedTextLabel: '🌐 Translate to {{target}}:\n{{preview}}',
+        customActionSelectedTextLabel: '✨ {{action}}:\n{{preview}}',
+        unknownError: 'Unknown error'
+      },
+      id: {
+        windowTitle: 'Obrolan PingoAI',
+        appTitle: 'PingoAI',
+        menuTooltip: 'Menu',
+        minimizeTooltip: 'Minimalkan',
+        menuSettingsLabel: 'Pengaturan',
+        menuClearChatLabel: 'Hapus Riwayat',
+        welcomeTitle: 'Apa yang bisa saya bantu hari ini?',
+        usageTitle: '📖 Cara Penggunaan',
+        usageStepCopy: 'Salin teks yang ingin diproses',
+        usageStepBubblePrefix: 'Tekan',
+        usageStepBubbleSuffix: 'untuk menampilkan popup PingoAI jika tidak muncul otomatis',
+        usageStepChooseTool: 'Pilih alat yang ingin kamu gunakan',
+        usageStepTogglePrefix: 'Gunakan',
+        usageStepToggleSuffix: 'untuk membuka atau menutup jendela chat',
+        messagePlaceholder: 'Tulis pesanmu di sini...',
+        sendButton: 'Kirim',
+        themeLightLabel: 'Mode Terang',
+        themeDarkLabel: 'Mode Gelap',
+        pinWindowLabel: 'Sematkan Jendela',
+        unpinWindowLabel: 'Lepas Sematan',
+        alwaysOnTopLabel: 'Selalu di Atas',
+        clearChatConfirmMessage: 'Hapus semua percakapan? AI akan melupakan konteks sebelumnya.',
+        noApiKeyWarning: '⚠️ Konfigurasikan API key di pengaturan (Ctrl+Shift+S).',
+        sendErrorPrefix: '❌ Gagal mengirim pesan:',
+        processErrorPrefix: '❌ Gagal memproses:',
+        genericErrorPrefix: '❌ Terjadi kesalahan:',
+        hideButtonTitle: 'Sembunyikan ({{shortcut}})',
+        quitButtonTitle: 'Keluar ({{shortcut}})',
+        selectedTextLabel: 'Teks yang dipilih:\n{{preview}}',
+        translateSelectedTextLabel: '🌐 Terjemahkan ke {{target}}:\n{{preview}}',
+        customActionSelectedTextLabel: '✨ {{action}}:\n{{preview}}',
+        unknownError: 'Kesalahan tidak diketahui'
+      }
+    };
+
+    function getTranslation(key, vars = {}) {
+      const dictionary = translations[languagePreferences.interfaceLanguage] || translations.en;
+      const fallback = translations.en[key] || '';
+      let template = dictionary[key] || fallback || '';
+      return template.replace(/\{\{(.*?)\}\}/g, (_, token) => {
+        const value = vars[token.trim()];
+        return value !== undefined ? value : '';
+      });
+    }
+
+    function applyTranslationsToDom() {
+      document.title = getTranslation('windowTitle');
+
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        const text = getTranslation(key);
+        if (text) {
+          el.textContent = text;
+        }
+      });
+
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        const text = getTranslation(key);
+        if (text) {
+          el.setAttribute('placeholder', text);
+        }
+      });
+
+      document.querySelectorAll('[data-i18n-title]').forEach(el => {
+        const key = el.getAttribute('data-i18n-title');
+        const text = getTranslation(key);
+        if (text) {
+          el.title = text;
+        }
+      });
+
+      refreshThemeLabel();
+      refreshPinLabel();
+      updateCloseButtonTitle();
+    }
+
+    function applyLanguageSettings(languageSettings = {}) {
+      languagePreferences.interfaceLanguage = languageSettings.interfaceLanguage || 'en';
+      languagePreferences.aiLanguage = languageSettings.aiLanguage || 'en';
+      applyTranslationsToDom();
+    }
+
+    function refreshThemeLabel() {
+      if (!themeLabel) {
+        return;
+      }
+      const key = isDarkMode ? 'themeDarkLabel' : 'themeLightLabel';
+      themeLabel.textContent = getTranslation(key) || themeLabel.textContent;
+    }
+
+    function refreshPinLabel() {
+      if (!pinLabel) {
+        return;
+      }
+      const labelKey = pinToggleItem?.disabled
+        ? 'alwaysOnTopLabel'
+        : (currentPinState ? 'unpinWindowLabel' : 'pinWindowLabel');
+      pinLabel.textContent = getTranslation(labelKey) || pinLabel.textContent;
+    }
+
+    function updateCloseButtonTitle() {
+      if (!closeBtn) {
+        return;
+      }
+      const key = runInBackgroundEnabled ? 'hideButtonTitle' : 'quitButtonTitle';
+      closeBtn.title = getTranslation(key, { shortcut: currentToggleShortcutLabel });
+    }
+
+    applyTranslationsToDom();
+
+    // Toggle dropdown menu
+    menuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdownMenu.classList.toggle('show');
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!menuBtn.contains(e.target) && !dropdownMenu.contains(e.target)) {
+        dropdownMenu.classList.remove('show');
+      }
+    });
+
+    // Theme management - load from electron store
+    async function loadTheme() {
+      const settings = await window.electronAPI.getSettings();
+      isDarkMode = !!settings.darkMode;
+      document.body.classList.toggle('dark-mode', isDarkMode);
+      updateThemeIcon(isDarkMode);
+    }
+
+    loadTheme();
+
+    themeToggleItem.addEventListener('click', async () => {
+      isDarkMode = document.body.classList.toggle('dark-mode');
+      await window.electronAPI.setDarkMode(isDarkMode);
+      updateThemeIcon(isDarkMode);
+      dropdownMenu.classList.remove('show');
+    });
+
+    function updateThemeIcon(isDark) {
+      isDarkMode = !!isDark;
+      const sunIcon = themeToggleItem.querySelector('.sun-icon');
+      const moonIcon = themeToggleItem.querySelector('.moon-icon');
+      if (isDarkMode) {
+        sunIcon.style.display = 'none';
+        moonIcon.style.display = 'block';
+        themeToggleItem.classList.add('theme-item');
+      } else {
+        sunIcon.style.display = 'block';
+        moonIcon.style.display = 'none';
+        themeToggleItem.classList.add('theme-item');
+      }
+      refreshThemeLabel();
+    }
+
+    // Auto-resize textarea
+    messageInput.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
+
+    // Send message on Enter (Shift+Enter for new line)
+    messageInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    sendBtn.addEventListener('click', sendMessage);
+    closeBtn.addEventListener('click', () => window.electronAPI.closeWindow());
+    minimizeBtn.addEventListener('click', () => window.electronAPI.minimizeWindow());
+    
+    settingsMenuItem.addEventListener('click', async () => {
+      await window.electronAPI.openSettings();
+      dropdownMenu.classList.remove('show');
+    });
+
+    clearMenuItem.addEventListener('click', async () => {
+      if (confirm(getTranslation('clearChatConfirmMessage'))) {
+        // Clear UI
+        const messages = chatContainer.querySelectorAll('.message');
+        messages.forEach(msg => msg.remove());
+        
+        // Clear backend history
+        await window.electronAPI.clearConversation();
+      }
+      dropdownMenu.classList.remove('show');
+    });
+
+    // Pin button functionality
+    const pinIcon = pinToggleItem.querySelector('.pin-icon');
+    const unpinIcon = pinToggleItem.querySelector('.unpin-icon');
+
+    // Check initial pin state
+    window.electronAPI.isPinned().then(result => {
+      updatePinUI(result.isPinned);
+    });
+
+    pinToggleItem.addEventListener('click', async () => {
+      const result = await window.electronAPI.togglePin();
+      if (result.success) {
+        updatePinUI(result.isPinned);
+      }
+      dropdownMenu.classList.remove('show');
+    });
+
+    function updatePinUI(isPinned) {
+      currentPinState = !!isPinned;
+      if (pinToggleItem.disabled) {
+        pinToggleItem.classList.add('active');
+        pinIcon.style.display = 'none';
+        unpinIcon.style.display = 'block';
+        refreshPinLabel();
+        return;
+      }
+      if (currentPinState) {
+        pinToggleItem.classList.add('active');
+        pinIcon.style.display = 'none';
+        unpinIcon.style.display = 'block';
+      } else {
+        pinToggleItem.classList.remove('active');
+        pinIcon.style.display = 'block';
+        unpinIcon.style.display = 'none';
+      }
+      refreshPinLabel();
+    }
+
+    async function sendMessage() {
+      const message = messageInput.value.trim();
+      if (!message) return;
+
+      // Add user message
+      addMessage(message, 'user');
+      messageInput.value = '';
+      messageInput.style.height = 'auto';
+
+      // Disable input
+      sendBtn.disabled = true;
+      messageInput.disabled = true;
+      typingIndicator.classList.add('show');
+
+      try {
+        // Send to AI
+        const response = await window.electronAPI.sendMessage(message, 'chat');
+        
+        typingIndicator.classList.remove('show');
+        
+        if (response.error) {
+          const reason = response.error || getTranslation('unknownError');
+          addMessage(`${getTranslation('genericErrorPrefix')} ${reason}`, 'error');
+        } else {
+          addMessage(response.message, 'ai');
+        }
+      } catch (error) {
+        typingIndicator.classList.remove('show');
+        const reason = (error && error.message) || getTranslation('unknownError');
+        addMessage(`${getTranslation('sendErrorPrefix')} ${reason}`, 'error');
+      } finally {
+        sendBtn.disabled = false;
+        messageInput.disabled = false;
+        messageInput.focus();
+      }
+    }
+
+    function addMessage(text, type) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${type}`;
+      
+      // Parse markdown for AI messages
+      if (type === 'ai') {
+        messageDiv.innerHTML = marked.parse(text);
+      } else {
+        messageDiv.textContent = text;
+      }
+      
+      chatContainer.insertBefore(messageDiv, typingIndicator);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function addMessageWithHTML(html, type) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${type}`;
+      messageDiv.innerHTML = html.replace(/\n/g, '<br>');
+      
+      chatContainer.insertBefore(messageDiv, typingIndicator);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // Check settings on load
+    window.electronAPI.getSettings().then(settings => {
+      if (settings.languageSettings) {
+        applyLanguageSettings(settings.languageSettings);
+      }
+      if (!settings.apiKey) {
+        addMessage(getTranslation('noApiKeyWarning'), 'error');
+      }
+      if (settings.windowSettings) {
+        applyWindowSettingsToUI(settings.windowSettings);
+      }
+      if (settings.serviceSettings) {
+        runInBackgroundEnabled = settings.serviceSettings.runInBackground !== false;
+        updateCloseButtonTitle();
+      }
+    });
+
+    window.electronAPI.onWindowSettingsUpdated((windowSettings) => {
+      applyWindowSettingsToUI(windowSettings);
+    });
+
+    window.electronAPI.onLanguageSettingsUpdated((languageSettings) => {
+      applyLanguageSettings(languageSettings || {});
+    });
+
+    window.electronAPI.onServiceSettingsUpdated((serviceSettings = {}) => {
+      runInBackgroundEnabled = serviceSettings.runInBackground !== false;
+      updateCloseButtonTitle();
+    });
+
+    function applyWindowSettingsToUI(windowSettings = {}) {
+      const toggleLabel = formatShortcutLabel(windowSettings.toggleShortcut, 'Ctrl+Alt+A');
+      const bubbleLabel = formatShortcutLabel(windowSettings.bubbleShortcut, 'Ctrl+Shift+X');
+      
+      if (shortcutHint) {
+        shortcutHint.textContent = toggleLabel;
+      }
+      if (bubbleShortcutHint) {
+        bubbleShortcutHint.textContent = bubbleLabel;
+      }
+      currentToggleShortcutLabel = toggleLabel;
+      updateCloseButtonTitle();
+      if (typeof windowSettings.alwaysOnTop === 'boolean') {
+        updatePinUI(windowSettings.alwaysOnTop);
+      }
+    }
+
+    function formatShortcutLabel(accelerator, fallback = 'Ctrl+Alt+A') {
+      const value = accelerator || fallback;
+      const isMac = navigator.platform?.toLowerCase().includes('mac');
+      return value.replace('CommandOrControl', isMac ? 'Cmd' : 'Ctrl');
+    }
+
+    // Listen for dark mode changes from settings
+    window.electronAPI.onApplyDarkMode((isDark) => {
+      isDarkMode = !!isDark;
+      document.body.classList.toggle('dark-mode', isDarkMode);
+      updateThemeIcon(isDarkMode);
+    });
+
+    // Listen for selected text from bubble
+    window.electronAPI.onProcessSelectedText(async (data) => {
+      const { text, action, param } = data;
+      const preview = `${text.substring(0, 200)}${text.length > 200 ? '...' : ''}`;
+      
+      let userMessage = '';
+      if (action === 'translate' && param) {
+        userMessage = `<strong>${getTranslation('translateSelectedTextLabel', { target: param, preview: '' }).split(':')[0]}:</strong>\n${preview}`;
+      } else if (action === 'custom' && param) {
+        userMessage = `<strong>${param}:</strong>\n${preview}`;
+      } else {
+        userMessage = `<strong>${getTranslation('selectedTextLabel', { preview: '' }).split(':')[0]}:</strong>\n${preview}`;
+      }
+      
+      addMessageWithHTML(userMessage, 'user');
+      
+      // Disable input
+      sendBtn.disabled = true;
+      messageInput.disabled = true;
+      typingIndicator.classList.add('show');
+      
+      try {
+        // Send to AI with the action and param
+        const response = await window.electronAPI.sendMessage(text, action, param);
+        
+        typingIndicator.classList.remove('show');
+        
+        if (response.error) {
+          const reason = response.error || getTranslation('unknownError');
+          addMessage(`${getTranslation('genericErrorPrefix')} ${reason}`, 'error');
+        } else {
+          addMessage(response.message, 'ai');
+        }
+      } catch (error) {
+        typingIndicator.classList.remove('show');
+        const reason = (error && error.message) || getTranslation('unknownError');
+        addMessage(`${getTranslation('processErrorPrefix')} ${reason}`, 'error');
+      } finally {
+        sendBtn.disabled = false;
+        messageInput.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

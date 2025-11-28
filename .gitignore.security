@@ -1,0 +1,6 @@
+# Ignore build artifacts
+dist/main-obfuscated.js
+dist/main.jsc
+
+# Release builds
+release/
