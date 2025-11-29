@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 // Configuration - HARDCODE YOUR API KEY HERE
 // This file stays on your server, so it's safe!
-$API_KEY = "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"; 
+$API_KEY = "API-SUDAH-DI-SERVER"; 
 $API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 // Get JSON input
