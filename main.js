@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, globalShortcut, screen, clipboard, Tray, Menu } = require('electron');
 const { spawn } = require('child_process');
+const dns = require('dns');
 const fs = require('fs');
 const path = require('path');
 
@@ -84,9 +85,6 @@ let lastBubbleTimestamp = 0;
 const autoHideSuppressedTexts = new Set();
 let isProcessingAction = false;
 
-// Duplicate text tracking
-let lastProcessedText = '';
-let duplicateTextCounter = 0;
 
 // AI Service State
 let aiServiceEnabled = store.get('aiServiceEnabled', true);
@@ -922,6 +920,31 @@ process.on('uncaughtException', (error) => {
   app.quit();
 });
 
+// Variables for glance mode action retry
+let lastAction = null;
+let lastParam = null;
+
+// Check internet connectivity with 3-second timeout
+async function checkInternetConnection() {
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      // Timeout after 3 seconds - slow connection
+      resolve({ success: false, timeout: true });
+    }, 3000);
+
+    dns.lookup('google.com', (err) => {
+      clearTimeout(timeout);
+      if (err) {
+        // DNS lookup failed - no connection
+        resolve({ success: false, timeout: false });
+      } else {
+        // DNS lookup successful
+        resolve({ success: true });
+      }
+    });
+  });
+}
+
 // IPC Handlers
 ipcMain.handle('get-settings', async () => {
   return {
@@ -1298,7 +1321,35 @@ ipcMain.handle('send-text-action', async (event, { action, param }) => {
 
     // Process AI request in background
     if (selectedText) {
+      // Store last action for retry
+      lastAction = action;
+      lastParam = param;
+      
       try {
+        // Step 1: Check internet connectivity
+        console.log('[Connectivity Check] Checking internet connection...');
+        const connectivityResult = await checkInternetConnection();
+        
+        if (!connectivityResult.success) {
+          console.log('[Connectivity Check] Failed:', connectivityResult.timeout ? 'timeout' : 'no connection');
+          
+          if (connectivityResult.timeout) {
+            // Slow connection detected, notify frontend but continue
+            if (glanceResponseWindow) {
+              glanceResponseWindow.webContents.send('connectivity-slow');
+            }
+            console.log('[Connectivity Check] Slow connection detected, continuing with AI request...');
+          } else {
+            // No connection at all, stop and notify
+            if (glanceResponseWindow) {
+              glanceResponseWindow.webContents.send('connectivity-check-failed');
+            }
+            return { success: false, error: 'No internet connection' };
+          }
+        } else {
+          console.log('[Connectivity Check] Connection OK');
+        }
+        
         // Build the AI message
         const apiKey = store.get('apiKey');
         const apiUrl = store.get('apiUrl');
@@ -1391,9 +1442,24 @@ ipcMain.handle('send-text-action', async (event, { action, param }) => {
         return { success: true, mode: 'glance' };
       } catch (error) {
         console.error('AI API Error:', error);
+        
+        let errorMessage = error.response?.data?.error?.message || error.message || 'Failed to connect to AI service';
+        let errorCode = 'ERR_UNKNOWN';
+
+        // Detect network errors
+        if (error.code === 'ENOTFOUND' || error.code === 'EAI_AGAIN' || error.message.includes('Network Error')) {
+          errorCode = 'ERR_NO_INTERNET';
+          errorMessage = 'ERR_NO_INTERNET';
+        } else if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT' || error.message.includes('timeout')) {
+          // Timeout error
+          errorCode = 'ERR_TIMEOUT';
+          errorMessage = 'ERR_TIMEOUT';
+        }
+        
         if (glanceResponseWindow) {
           glanceResponseWindow.webContents.send('glance-ai-response', {
-            error: error.response?.data?.error?.message || error.message || 'Failed to connect to AI service',
+            error: errorMessage,
+            errorCode: errorCode,
             action: action
           });
         }
@@ -1423,6 +1489,155 @@ ipcMain.handle('send-text-action', async (event, { action, param }) => {
     }
 
     return { success: true, mode: 'panel' };
+  }
+});
+
+// Retry last glance action (called from glance-response.html retry button)
+ipcMain.handle('retry-glance-action', async () => {
+  if (!lastAction || !selectedText) {
+    console.log('[IPC] retry-glance-action: No action or text to retry');
+    return { success: false, error: 'No previous action to retry' };
+  }
+  
+  console.log('[IPC] Retrying last glance action:', lastAction);
+  
+  // Re-trigger the connectivity check and AI processing
+  // by simulating a send-text-action call
+  try {
+    // Check connectivity again
+    console.log('[Connectivity Check] Checking internet connection...');
+    const connectivityResult = await checkInternetConnection();
+    
+    if (!connectivityResult.success) {
+      console.log('[Connectivity Check] Failed:', connectivityResult.timeout ? 'timeout' : 'no connection');
+      
+      if (connectivityResult.timeout) {
+        // Slow connection detected, notify frontend but continue
+        if (glanceResponseWindow) {
+          glanceResponseWindow.webContents.send('connectivity-slow');
+        }
+        console.log('[Connectivity Check] Slow connection detected, continuing with AI request...');
+      } else {
+        // No connection at all, stop and notify
+        if (glanceResponseWindow) {
+          glanceResponseWindow.webContents.send('connectivity-check-failed');
+        }
+        return { success: false, error: 'No internet connection' };
+      }
+    } else {
+      console.log('[Connectivity Check] Connection OK');
+    }
+    
+    // Proceed with AI request (copy-paste logic from send-text-action)
+    const apiKey = store.get('apiKey');
+    const apiUrl = store.get('apiUrl');
+    const model = store.get('model', 'gpt-3.5-turbo');
+    const languageSettings = store.get('languageSettings', DEFAULT_LANGUAGE_SETTINGS);
+    const aiLanguage = languageSettings.aiLanguage || 'en';
+
+    if (!apiKey) {
+      if (glanceResponseWindow) {
+        glanceResponseWindow.webContents.send('glance-ai-response', {
+          error: 'API Key not configured. Please set up your API key in Settings.',
+          action: lastAction
+        });
+      }
+      return { success: false, error: 'No API key' };
+    }
+
+    // Build AI message based on action
+    const axios = require('axios');
+    const systemPrompt = aiLanguage === 'id' ? SYSTEM_PROMPT_ID : SYSTEM_PROMPT_EN;
+
+    // Generate action-specific prompt
+    let userMessage = selectedText;
+
+    if (lastAction === 'explain') {
+      userMessage = aiLanguage === 'id'
+        ? `Jelaskan isi teks ini dengan bahasa yang ringkas, jelas, dan mudah dipahami. Fokus ke makna utama, tambahkan konteks jika perlu, dan hindari mengubah fakta dari teks asli.\\n\\n${selectedText}`
+        : `Explain the content of this text in concise, clear, and easy-to-understand language. Focus on the main meaning, add context if necessary, and avoid changing facts from the original text.\\n\\n${selectedText}`;
+    } else if (lastAction === 'summarize') {
+      userMessage = aiLanguage === 'id'
+        ? `Ringkas teks ini menjadi poin-poin pentingnya tanpa menghilangkan inti informasi. Jangan tambahin info baru, cukup rangkum yang ada.\\n\\n${selectedText}`
+        : `Summarize this text into key points without losing the core information. Do not add new info, just summarize what is there.\\n\\n${selectedText}`;
+    } else if (lastAction === 'formalize') {
+      userMessage = aiLanguage === 'id'
+        ? `Ubah teks ini menjadi versi yang lebih formal, rapi, dan sesuai bahasa profesional. Jangan ubah makna, hanya tingkatkan struktur dan pilihan katanya.\\n\\n${selectedText}`
+        : `Transform this text into a more formal, neat, and professional version. Do not change the meaning, only improve the structure and word choice.\\n\\n${selectedText}`;
+    } else if (lastAction === 'bullet-points') {
+      userMessage = aiLanguage === 'id'
+        ? `Ubah teks ini menjadi daftar poin yang terstruktur. Pisahkan tiap ide utama, pakai bullet dan bahasa yang padat.\\n\\n${selectedText}`
+        : `Convert this text into a structured list of points. Separate each main idea, use bullets and concise language.\\n\\n${selectedText}`;
+    } else if (lastAction === 'translate') {
+      userMessage = aiLanguage === 'id'
+        ? `Terjemahkan ke ${lastParam || 'English'}: ${selectedText}`
+        : `Translate to ${lastParam || 'English'}: ${selectedText}`;
+    } else if (lastAction === 'custom') {
+      userMessage = `${lastParam}: ${selectedText}`;
+    }
+
+    let requestUrl = apiUrl;
+    let requestHeaders = {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    };
+    let requestData = {
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage }
+      ]
+    };
+
+    // Check integration type
+    const integration = store.get('integration', { type: 'custom' });
+
+    // Jika menggunakan 'free' integration (PHP Proxy)
+    if (integration.type === 'free') {
+      console.log('🚀 Using PHP Proxy for Free Integration (Glance Mode - Retry)');
+      requestUrl = SERVER_URL;
+      requestHeaders = {
+        'Content-Type': 'application/json'
+      };
+    }
+
+    // Call AI API
+    const response = await axios.post(requestUrl, requestData, {
+      headers: requestHeaders,
+      timeout: 60000
+    });
+
+    const aiMessage = response.data.choices[0].message.content;
+
+    // Send response to glance window
+    if (glanceResponseWindow) {
+      glanceResponseWindow.webContents.send('glance-ai-response', {
+        response: aiMessage,
+        action: lastAction
+      });
+    }
+
+    return { success: true, mode: 'glance' };
+  } catch (error) {
+    console.error('AI API Error (Retry):', error);
+    
+    let errorMessage = error.response?.data?.error?.message || error.message || 'Failed to connect to AI service';
+    let errorCode = 'ERR_UNKNOWN';
+
+    // Detect network errors
+    if (error.code === 'ENOTFOUND' || error.code === 'EAI_AGAIN' || error.message.includes('Network Error')) {
+      errorCode = 'ERR_NO_INTERNET';
+      errorMessage = 'ERR_NO_INTERNET'; // Send code to frontend for localization
+    }
+
+    if (glanceResponseWindow) {
+      glanceResponseWindow.webContents.send('glance-ai-response', {
+        error: errorMessage,
+        errorCode: errorCode,
+        action: lastAction
+      });
+    }
+    return { success: false, error: errorMessage };
   }
 });
 

@@ -319,79 +319,11 @@
 
     let loadingTimeout;
 
-    let loadingTimer3s;
-    let loadingTimer10s;
-    let currentLanguage = 'en';
-
     // Initialize
     setTimeout(() => {
       responseContainer.classList.add('show');
       loadSettings();
-      startLoadingTimers();
     }, 100);
-
-    // disconnect loading
-    function startLoadingTimers() {
-      if (loadingTimer3s) clearTimeout(loadingTimer3s);
-      if (loadingTimer10s) clearTimeout(loadingTimer10s);
-      loadingTimer3s = setTimeout(() => {
-        const loadingTextEl = document.getElementById('loadingText');
-        if (loadingTextEl) {
-          loadingTextEl.textContent = currentLanguage === 'id'
-            ? 'Menghubungkan ke server, sebentar lagi...'
-            : 'Connecting to server, almost there...';
-        }
-      }, 3000);
-      loadingTimer10s = setTimeout(() => {
-        showTimeoutError();
-      }, 10000);
-    }
-    function showTimeoutError() {
-      const errorMsg = currentLanguage === 'id' ? 'Gagal menghubungi server.' : 'Failed to connect to server.';
-      showErrorState(errorMsg);
-    }
-    function showErrorState(message) {
-      const retryText = currentLanguage === 'id' ? 'Coba Lagi' : 'Try Again';
-
-      responseContent.innerHTML = `
-    <div class="error-message" style="text-align: center;">
-      <p style="margin-bottom: 10px;">${message}</p>
-      <button id="retryBtn" style="
-        background: var(--orange);
-        color: white;
-        border: none;
-        padding: 6px 12px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 13px;
-        font-weight: 600;
-      ">${retryText}</button>
-    </div>
-  `;
-
-      updateWindowHeight();
-      const retryBtn = document.getElementById('retryBtn');
-      if (retryBtn) {
-        retryBtn.addEventListener('click', retryAction);
-      }
-    }
-    async function retryAction() {
-      responseContent.innerHTML = `
-    <div class="loading" id="loadingState">
-      <span id="loadingText">${currentLanguage === 'id' ? 'Memproses' : 'Processing'}</span>
-      <div class="loading-dots">
-        <div class="loading-dot"></div>
-        <div class="loading-dot"></div>
-        <div class="loading-dot"></div>
-      </div>
-    </div>
-  `;
-      updateWindowHeight();
-      startLoadingTimers();
-      if (window.electronAPI?.retryAction) {
-        window.electronAPI.retryAction();
-      }
-    }
 
     // Load settings (theme)
     async function loadSettings() {
@@ -401,9 +333,9 @@
         document.body.classList.toggle('dark-mode', isDarkMode);
 
         // Update loading text based on language
-        currentLanguage = settings.languageSettings?.interfaceLanguage || "en";
+        const language = settings.languageSettings?.interfaceLanguage || "en";
         if (loadingText) {
-          loadingText.textContent = currentLanguage === 'id' ? 'Memproses' : 'Processing';
+          loadingText.textContent = language === 'id' ? 'Memproses' : 'Processing';
         }
       } catch (error) {
         console.error('Error loading settings:', error);
@@ -431,53 +363,20 @@
     // Listen for AI response
     window.electronAPI.onAIResponse((data) => {
       if (loadingTimeout) clearTimeout(loadingTimeout);
-      if (loadingTimer3s) clearTimeout(loadingTimer3s);
-      if (loadingTimer10s) clearTimeout(loadingTimer10s);
+
       if (data.error) {
-        let errorMessage = data.error;
-
-        if (data.errorCode === 'ERR_NO_INTERNET' || data.error === 'ERR_NO_INTERNET') {
-          errorMessage = currentLanguage === 'id' ? 'Periksa koneksi Anda' : 'Check your connection';
-        } else if (data.errorCode === 'ERR_TIMEOUT' || data.error === 'ERR_TIMEOUT') {
-          errorMessage = currentLanguage === 'id' ? 'Waktu permintaan habis. Coba lagi.' : 'Request timeout. Try again.';
-        }
-
-        showErrorState(errorMessage);
+        responseContent.innerHTML = `<div class="error-message">\${data.error}</div>`;
+        updateWindowHeight();
       } else {
+        // Update action title
         if (data.action) {
           responseAction.textContent = getActionTitle(data.action);
         }
+
+        // Format the response text and animate typing
         const formattedText = formatResponse(data.response);
         animateTyping(formattedText);
       }
-    });
-
-    window.electronAPI.onConnectivitySlow(() => {
-      console.log('[Connectivity] Slow connection detected');
-      if (loadingTimer3s) clearTimeout(loadingTimer3s);
-      if (loadingTimer10s) clearTimeout(loadingTimer10s);
-
-      const loadingTextEl = document.getElementById('loadingText');
-      if (loadingTextEl) {
-        loadingTextEl.textContent = currentLanguage === 'id'
-          ? 'Terdeteksi koneksi lambat, mungkin menunggu lebih lama'
-          : 'Slow connection detected, may take longer';
-      }
-
-      loadingTimer10s = setTimeout(() => {
-        showTimeoutError();
-      }, 10000);
-    });
-    window.electronAPI.onConnectivityCheckFailed(() => {
-      console.log('[Connectivity] Connection check failed');
-      if (loadingTimer3s) clearTimeout(loadingTimer3s);
-      if (loadingTimer10s) clearTimeout(loadingTimer10s);
-      if (loadingTimeout) clearTimeout(loadingTimeout);
-
-      const errorMsg = currentLanguage === 'id'
-        ? 'Koneksi tidak tersedia'
-        : 'Connection not available';
-      showErrorState(errorMsg);
     });
 
     // Close on Escape key only with fade out
