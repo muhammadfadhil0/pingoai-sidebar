@@ -14,9 +14,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setDarkMode: (isDark) => ipcRenderer.invoke('set-dark-mode', isDark),
   getWindowState: () => ipcRenderer.invoke('get-window-state'),
   toggleTransparent: () => ipcRenderer.invoke('toggle-transparent'),
+  openUpdatePopup: () => ipcRenderer.invoke('open-update-popup'),
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  startUpdate: () => ipcRenderer.invoke('start-update'),
   onProcessSelectedText: (callback) => ipcRenderer.on('process-selected-text', (event, data) => callback(data)),
   onApplyDarkMode: (callback) => ipcRenderer.on('apply-dark-mode', (event, isDark) => callback(isDark)),
   onWindowSettingsUpdated: (callback) => ipcRenderer.on('window-settings-updated', (event, data) => callback(data)),
   onLanguageSettingsUpdated: (callback) => ipcRenderer.on('language-settings-updated', (event, data) => callback(data)),
-  onServiceSettingsUpdated: (callback) => ipcRenderer.on('service-settings-updated', (event, data) => callback(data))
+  onServiceSettingsUpdated: (callback) => ipcRenderer.on('service-settings-updated', (event, data) => callback(data)),
+  onUpdateAvailable: (callback) => ipcRenderer.on('update-available', (event, releaseInfo) => callback(releaseInfo))
 });

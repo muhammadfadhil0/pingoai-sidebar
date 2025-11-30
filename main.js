@@ -1,8 +1,9 @@
-const { app, BrowserWindow, ipcMain, globalShortcut, screen, clipboard, Tray, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut, screen, clipboard, Tray, Menu, shell } = require('electron');
 const { spawn } = require('child_process');
 const dns = require('dns');
 const fs = require('fs');
 const path = require('path');
+const axios = require('axios');
 
 
 // ========================================
@@ -68,11 +69,20 @@ let glanceResponseWindow = null;
 let onboardingWindow = null;
 let glanceModeHintWindow = null;
 let startupHintWindow = null;
+let updatePopupWindow = null;
 
 let tray = null;
 let selectedText = '';
 let lastBubbleBounds = null;
 let conversationHistory = [];
+
+// GitHub Update Checker Configuration
+const GITHUB_OWNER = 'muhammadfadhil0'; // Your GitHub username
+const GITHUB_REPO = 'pingoai-sidebar'; // Your repository name
+const UPDATE_CHECK_INTERVAL = 1000 * 60 * 60; // Check every hour
+let latestReleaseInfo = null;
+let updateCheckInterval = null;
+let dismissedUpdateVersion = null; // Track dismissed update version to avoid showing popup again
 
 const BUBBLE_WINDOW_WIDTH = 250;
 const BUBBLE_WINDOW_HEIGHT = 360;
@@ -593,7 +603,7 @@ function createGlanceModeHintWindow() {
 
   glanceModeHintWindow = new BrowserWindow({
     width: 460,
-    height: 420,
+    height: 400,
     frame: false,
     resizable: false,
     center: true,
@@ -647,7 +657,37 @@ function createStartupHintWindow() {
   return startupHintWindow;
 }
 
+// Create update available popup window
+function createUpdatePopupWindow() {
+  if (updatePopupWindow) {
+    updatePopupWindow.focus();
+    return updatePopupWindow;
+  }
 
+  updatePopupWindow = new BrowserWindow({
+    width: 420,
+    height: 400,
+    frame: false,
+    resizable: false,
+    center: true,
+    alwaysOnTop: true,
+    autoHideMenuBar: true,
+    icon: path.join(__dirname, 'assets', '256_icon.png'),
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'src/preload/update-available-preload.js')
+    }
+  });
+
+  updatePopupWindow.loadFile('src/renderer/update-available.html');
+
+  updatePopupWindow.on('closed', () => {
+    updatePopupWindow = null;
+  });
+
+  return updatePopupWindow;
+}
 
 // Create selection bubble window (appears when text is selected)
 function createSelectionBubble(bounds, options = {}) {
@@ -1028,6 +1068,207 @@ function handleHighlightWatcherPayload(payload) {
 }
 // ========================================
 
+// ========================================
+// GITHUB UPDATE CHECKER
+// Check for new releases on GitHub
+// ========================================
+
+/**
+ * Compare two semantic version strings
+ * @param {string} v1 - First version (e.g., "1.0.0")
+ * @param {string} v2 - Second version (e.g., "1.0.1")
+ * @returns {number} - 1 if v1 > v2, -1 if v1 < v2, 0 if equal
+ */
+function compareVersions(v1, v2) {
+  const parts1 = v1.replace(/^v/, '').split('.').map(Number);
+  const parts2 = v2.replace(/^v/, '').split('.').map(Number);
+  
+  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+    const p1 = parts1[i] || 0;
+    const p2 = parts2[i] || 0;
+    if (p1 > p2) return 1;
+    if (p1 < p2) return -1;
+  }
+  return 0;
+}
+
+/**
+ * Parse GitHub release notes to extract changelog items
+ * @param {string} body - Release body text from GitHub
+ * @returns {Array} - Array of changelog items with type and text
+ */
+function parseReleaseNotes(body) {
+  if (!body) return [];
+  
+  const items = [];
+  const lines = body.split('\n');
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    
+    // Skip headers and dividers
+    if (trimmed.startsWith('#') || trimmed.startsWith('---')) continue;
+    
+    // Parse bullet points
+    let text = trimmed;
+    let type = 'feature'; // default type
+    
+    // Remove bullet markers
+    text = text.replace(/^[-*•]\s*/, '');
+    
+    // Detect type from emoji or keywords
+    if (text.includes('🐛') || text.toLowerCase().includes('fix') || text.toLowerCase().includes('bug')) {
+      type = 'fix';
+      text = text.replace(/🐛\s*/g, '');
+    } else if (text.includes('✨') || text.toLowerCase().includes('new') || text.toLowerCase().includes('add')) {
+      type = 'feature';
+      text = text.replace(/✨\s*/g, '');
+    } else if (text.includes('⚡') || text.includes('🚀') || text.toLowerCase().includes('improve') || text.toLowerCase().includes('perf')) {
+      type = 'improve';
+      text = text.replace(/[⚡🚀]\s*/g, '');
+    }
+    
+    // Clean up remaining emojis and special characters
+    text = text.replace(/^[:\w]+:\s*/g, ''); // Remove :emoji: format
+    
+    if (text.length > 0) {
+      items.push({ type, text: text.trim() });
+    }
+  }
+  
+  return items;
+}
+
+/**
+ * Check for updates from GitHub releases
+ * @returns {Promise<Object|null>} - Release info if update available, null otherwise
+ */
+async function checkForGitHubUpdate() {
+  try {
+    const currentVersion = app.getVersion();
+    console.log(`[Update Checker] Current version: ${currentVersion}`);
+    
+    const response = await axios.get(
+      `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`,
+      {
+        headers: {
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'PingoAI-App'
+        },
+        timeout: 10000
+      }
+    );
+    
+    const release = response.data;
+    const latestVersion = release.tag_name.replace(/^v/, '');
+    
+    console.log(`[Update Checker] Latest version on GitHub: ${latestVersion}`);
+    
+    // Compare versions
+    if (compareVersions(latestVersion, currentVersion) > 0) {
+      console.log(`[Update Checker] Update available: ${currentVersion} -> ${latestVersion}`);
+      
+      const releaseInfo = {
+        version: latestVersion,
+        tagName: release.tag_name,
+        name: release.name || `Version ${latestVersion}`,
+        body: release.body || '',
+        changelog: parseReleaseNotes(release.body),
+        publishedAt: release.published_at,
+        htmlUrl: release.html_url,
+        downloadUrl: null
+      };
+      
+      // Find the appropriate asset for Windows
+      if (release.assets && release.assets.length > 0) {
+        const windowsAsset = release.assets.find(asset => 
+          asset.name.endsWith('.exe') || 
+          asset.name.includes('Setup') ||
+          asset.name.includes('win')
+        );
+        if (windowsAsset) {
+          releaseInfo.downloadUrl = windowsAsset.browser_download_url;
+        }
+      }
+      
+      latestReleaseInfo = releaseInfo;
+      return releaseInfo;
+    }
+    
+    console.log('[Update Checker] App is up to date');
+    return null;
+  } catch (error) {
+    console.error('[Update Checker] Error checking for updates:', error.message);
+    return null;
+  }
+}
+
+/**
+ * Notify all windows about available update and show update popup
+ * @param {Object} releaseInfo - Release information
+ */
+function notifyUpdateAvailable(releaseInfo) {
+  if (!releaseInfo) return;
+  
+  // Store for later use
+  latestReleaseInfo = releaseInfo;
+  
+  // Notify chat window (for the update ribbon)
+  if (chatWindow && chatWindow.webContents) {
+    chatWindow.webContents.send('update-available', releaseInfo);
+  }
+  
+  // Check if this version was already dismissed by user
+  if (dismissedUpdateVersion === releaseInfo.version) {
+    console.log('[Update Checker] Update popup dismissed for this version, not showing again');
+    return;
+  }
+  
+  // Show update popup automatically
+  createUpdatePopupWindow();
+  
+  // Send release info to popup when it's ready
+  if (updatePopupWindow) {
+    updatePopupWindow.webContents.once('did-finish-load', () => {
+      updatePopupWindow.webContents.send('update-info', releaseInfo);
+    });
+  }
+}
+
+/**
+ * Start periodic update checks
+ */
+function startUpdateChecker() {
+  // Check immediately on start (with a small delay to let app initialize)
+  setTimeout(async () => {
+    const releaseInfo = await checkForGitHubUpdate();
+    if (releaseInfo) {
+      notifyUpdateAvailable(releaseInfo);
+    }
+  }, 5000);
+  
+  // Then check periodically
+  updateCheckInterval = setInterval(async () => {
+    const releaseInfo = await checkForGitHubUpdate();
+    if (releaseInfo) {
+      notifyUpdateAvailable(releaseInfo);
+    }
+  }, UPDATE_CHECK_INTERVAL);
+}
+
+/**
+ * Stop periodic update checks
+ */
+function stopUpdateChecker() {
+  if (updateCheckInterval) {
+    clearInterval(updateCheckInterval);
+    updateCheckInterval = null;
+  }
+}
+
+// ========================================
+
 function createTray() {
   try {
     // Use logo.png from assets folder
@@ -1178,6 +1419,11 @@ app.whenReady().then(() => {
   // Start HighlightWatcher for Ctrl+C detection and text selection (Windows only)
   startHighlightWatcher();
 
+  // Start GitHub update checker (only after onboarding is completed)
+  if (onboardingCompleted) {
+    startUpdateChecker();
+  }
+
   // Setup auto-start dari saved settings
   if (typeof serviceSettings.autoStart === 'boolean') {
     setupAutoStart(serviceSettings.autoStart);
@@ -1218,6 +1464,7 @@ app.on('before-quit', () => {
   globalShortcut.unregisterAll();
   stopClipboardWatcher();
   stopHighlightWatcher();
+  stopUpdateChecker();
   if (tray) {
     tray.destroy();
     tray = null;
@@ -1229,6 +1476,7 @@ app.on('will-quit', () => {
   globalShortcut.unregisterAll();
   stopClipboardWatcher();
   stopHighlightWatcher();
+  stopUpdateChecker();
   if (tray) {
     tray.destroy();
     tray = null;
@@ -2385,6 +2633,99 @@ ipcMain.handle('close-glance-hint', async () => {
     return { success: true };
   }
   return { success: false };
+});
+
+// Close glance hint and show update popup (temporary - for testing)
+ipcMain.handle('close-glance-hint-and-show-update', async () => {
+  if (glanceModeHintWindow) {
+    glanceModeHintWindow.close();
+  }
+  // Small delay to ensure window is closed before opening new one
+  setTimeout(() => {
+    createUpdatePopupWindow();
+  }, 100);
+  return { success: true };
+});
+
+// Open update popup window (temporary - for testing)
+ipcMain.handle('open-update-popup', async () => {
+  createUpdatePopupWindow();
+  // Send release info to the popup when it's ready
+  if (updatePopupWindow && latestReleaseInfo) {
+    updatePopupWindow.webContents.once('did-finish-load', () => {
+      updatePopupWindow.webContents.send('update-info', latestReleaseInfo);
+    });
+  }
+  return { success: true };
+});
+
+// Close update popup window
+ipcMain.handle('close-update-popup', async () => {
+  if (updatePopupWindow) {
+    updatePopupWindow.close();
+    return { success: true };
+  }
+  return { success: false };
+});
+
+// Dismiss update (user clicked Later or Close) - won't show popup again for this version
+ipcMain.handle('dismiss-update', async () => {
+  if (latestReleaseInfo && latestReleaseInfo.version) {
+    dismissedUpdateVersion = latestReleaseInfo.version;
+    console.log('[Update Checker] User dismissed update for version:', dismissedUpdateVersion);
+  }
+  if (updatePopupWindow) {
+    updatePopupWindow.close();
+  }
+  return { success: true };
+});
+
+// Get latest release info
+ipcMain.handle('get-release-info', async () => {
+  if (latestReleaseInfo) {
+    return { success: true, releaseInfo: latestReleaseInfo };
+  }
+  // Try to fetch if not cached
+  const releaseInfo = await checkForGitHubUpdate();
+  return { success: !!releaseInfo, releaseInfo: releaseInfo };
+});
+
+// Check for updates manually
+ipcMain.handle('check-for-updates', async () => {
+  const releaseInfo = await checkForGitHubUpdate();
+  if (releaseInfo) {
+    notifyUpdateAvailable(releaseInfo);
+    return { success: true, updateAvailable: true, releaseInfo };
+  }
+  return { success: true, updateAvailable: false };
+});
+
+// Start update - open download page or start download
+ipcMain.handle('start-update', async () => {
+  console.log('[Update] Starting update process...');
+  
+  if (!latestReleaseInfo) {
+    console.log('[Update] No release info available');
+    return { success: false, error: 'No update information available' };
+  }
+  
+  // If we have a direct download URL, we could implement auto-download
+  // For now, open the releases page in browser
+  const downloadUrl = latestReleaseInfo.downloadUrl || latestReleaseInfo.htmlUrl;
+  
+  if (downloadUrl) {
+    console.log('[Update] Opening download URL:', downloadUrl);
+    shell.openExternal(downloadUrl);
+    
+    // Close the update popup
+    if (updatePopupWindow) {
+      updatePopupWindow.close();
+    }
+    
+    return { success: true, action: 'opened-browser' };
+  }
+  
+  return { success: false, error: 'No download URL available' };
 });
 
 // Save glance hint preference
