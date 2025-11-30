@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="UTF-8">
   <title>PingoAI Settings</title>
@@ -73,7 +74,8 @@
       padding: 40px;
       max-width: 800px;
       margin: 0 auto;
-      padding-bottom: 100px; /* Space for fixed buttons if needed */
+      padding-bottom: 100px;
+      /* Space for fixed buttons if needed */
     }
 
     .sidebar-header {
@@ -138,8 +140,15 @@
     }
 
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(5px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(5px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .settings-container {
@@ -281,7 +290,8 @@
     .button-group {
       position: fixed;
       bottom: 0;
-      left: 200px; /* Sidebar width */
+      left: 200px;
+      /* Sidebar width */
       right: 0;
       background: var(--bg-primary);
       padding: 12px 24px;
@@ -289,8 +299,9 @@
       display: flex;
       gap: 12px;
       z-index: 100;
-      justify-content: flex-end; /* Align to right */
-      box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+      justify-content: flex-end;
+      /* Align to right */
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
     }
 
     .button-group button {
@@ -479,6 +490,21 @@
     .info-box li {
       margin-bottom: 4px;
     }
+
+    /* TAMBAHAN BARU: CSS untuk Progress Bar Limit */
+    #premiumRequestBar {
+      transition: width 0.3s ease, background-color 0.3s ease;
+    }
+
+    #premiumRequestBar.low {
+      background: #f59e0b;
+    }
+
+    #premiumRequestBar.depleted {
+      background: #ef4444;
+    }
+
+    /* AKHIR TAMBAHAN */
 
     .section-header {
       color: var(--text-primary);
@@ -895,9 +921,17 @@
       border-radius: 50%;
     }
 
-    .window-dot:nth-child(1) { background: #ff5f57; }
-    .window-dot:nth-child(2) { background: #febc2e; }
-    .window-dot:nth-child(3) { background: #28c840; }
+    .window-dot:nth-child(1) {
+      background: #ff5f57;
+    }
+
+    .window-dot:nth-child(2) {
+      background: #febc2e;
+    }
+
+    .window-dot:nth-child(3) {
+      background: #28c840;
+    }
 
     .theme-preview-content {
       position: absolute;
@@ -1004,8 +1038,13 @@
       background: #3d3d3d;
     }
 
-    .theme-preview-half .theme-preview-bar:nth-child(1) { width: 70%; }
-    .theme-preview-half .theme-preview-bar:nth-child(2) { width: 50%; }
+    .theme-preview-half .theme-preview-bar:nth-child(1) {
+      width: 70%;
+    }
+
+    .theme-preview-half .theme-preview-bar:nth-child(2) {
+      width: 50%;
+    }
 
     .theme-card-label {
       text-align: center;
@@ -1015,6 +1054,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="settings-layout">
     <div class="settings-sidebar">
@@ -1023,30 +1063,46 @@
           <span data-i18n="settingsTitle">Settings</span>
         </div>
       </div>
-      
+
       <div class="sidebar-nav">
         <div class="sidebar-item active" data-tab="ai-mode">
-          <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+          <svg viewBox="0 0 24 24">
+            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
+          </svg>
           <span data-i18n="aiModeSectionTitle">AI Mode</span>
         </div>
         <div class="sidebar-item" data-tab="language">
-          <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95c-.32-1.25-.78-2.45-1.38-3.56 1.84.63 3.37 1.91 4.33 3.56zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2 0 .68.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56-1.84-.63-3.37-1.91-4.33-3.56zm2.95-8H5.08c.96-1.65 2.49-2.93 4.33-3.56C8.81 5.55 8.35 6.75 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2 0-.68.07-1.35.16-2h4.68c.09.65.16 1.32.16 2 0 .68-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95c-.96 1.65-2.49 2.93-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2 0-.68-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg>
+          <svg viewBox="0 0 24 24">
+            <path
+              d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95c-.32-1.25-.78-2.45-1.38-3.56 1.84.63 3.37 1.91 4.33 3.56zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2 0 .68.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56-1.84-.63-3.37-1.91-4.33-3.56zm2.95-8H5.08c.96-1.65 2.49-2.93 4.33-3.56C8.81 5.55 8.35 6.75 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2 0-.68.07-1.35.16-2h4.68c.09.65.16 1.32.16 2 0 .68-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95c-.96 1.65-2.49 2.93-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2 0-.68-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z" />
+          </svg>
           <span data-i18n="languageSectionTitle">Language</span>
         </div>
         <div class="sidebar-item" data-tab="appearance">
-          <svg viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+          <svg viewBox="0 0 24 24">
+            <path
+              d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
+          </svg>
           <span data-i18n="appearanceSectionTitle">Appearance</span>
         </div>
         <div class="sidebar-item" data-tab="integration">
-          <svg viewBox="0 0 24 24"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
+          <svg viewBox="0 0 24 24">
+            <path
+              d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z" />
+          </svg>
           <span data-i18n="integrationSectionTitle">Integration</span>
         </div>
         <div class="sidebar-item" data-tab="service">
-          <svg viewBox="0 0 24 24"><path d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/></svg>
+          <svg viewBox="0 0 24 24">
+            <path
+              d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z" />
+          </svg>
           <span data-i18n="serviceSectionTitle">Service</span>
         </div>
         <div class="sidebar-item" data-tab="window">
-          <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/></svg>
+          <svg viewBox="0 0 24 24">
+            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z" />
+          </svg>
           <span data-i18n="windowSectionTitle">Window Settings</span>
         </div>
       </div>
@@ -1055,386 +1111,421 @@
     <div class="settings-content">
       <div class="settings-content-inner">
 
-    <!-- Toast Container -->
-    <div class="toast-container" id="toastContainer"></div>
+        <!-- Toast Container -->
+        <div class="toast-container" id="toastContainer"></div>
 
-    <!-- Warning Modal -->
-    <div class="modal-overlay" id="warningModal">
-      <div class="modal-content">
-        <div class="modal-icon">
-          <svg viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-          </svg>
+        <!-- Warning Modal -->
+        <div class="modal-overlay" id="warningModal">
+          <div class="modal-content">
+            <div class="modal-icon">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+              </svg>
+            </div>
+            <h3 class="modal-title" data-i18n="glanceModeWarningTitle">Glance Mode Requirement</h3>
+            <p class="modal-message" data-i18n="glanceModeWarningMsg">Glance Mode requires PingoAI to run in the
+              background to function correctly. This setting cannot be disabled while in Glance Mode.</p>
+            <button class="modal-btn" id="closeModalBtn" data-i18n="glanceModeWarningBtn">Understood</button>
+          </div>
         </div>
-        <h3 class="modal-title" data-i18n="glanceModeWarningTitle">Glance Mode Requirement</h3>
-        <p class="modal-message" data-i18n="glanceModeWarningMsg">Glance Mode requires PingoAI to run in the background to function correctly. This setting cannot be disabled while in Glance Mode.</p>
-        <button class="modal-btn" id="closeModalBtn" data-i18n="glanceModeWarningBtn">Understood</button>
-      </div>
-    </div>
 
-    <form id="settingsForm">
-      <!-- AI MODE SECTION -->
-      <div id="section-ai-mode" class="settings-section active">
-      <h2 class="section-header" data-i18n="aiModeSectionTitle">AI Mode</h2>
+        <form id="settingsForm">
+          <!-- AI MODE SECTION -->
+          <div id="section-ai-mode" class="settings-section active">
+            <h2 class="section-header" data-i18n="aiModeSectionTitle">AI Mode</h2>
 
-      <div class="form-group">
-        <div class="mode-cards">
-          <!-- Glance Mode Card -->
-          <label class="mode-card" data-mode="glance">
-            <input type="radio" name="aiModeChoice" value="glance">
-            <div class="mode-card-illustration glance-illustration">
-              <div class="glance-bubble">
-                <img src="../../assets/bubble_ai.png" alt="AI" class="bubble-icon">
-              </div>
-              <div class="glance-lines">
-                <div class="line"></div>
-                <div class="line"></div>
-                <div class="line short"></div>
+            <div class="form-group">
+              <div class="mode-cards">
+                <!-- Glance Mode Card -->
+                <label class="mode-card" data-mode="glance">
+                  <input type="radio" name="aiModeChoice" value="glance">
+                  <div class="mode-card-illustration glance-illustration">
+                    <div class="glance-bubble">
+                      <img src="../../assets/bubble_ai.png" alt="AI" class="bubble-icon">
+                    </div>
+                    <div class="glance-lines">
+                      <div class="line"></div>
+                      <div class="line"></div>
+                      <div class="line short"></div>
+                    </div>
+                  </div>
+                  <span class="mode-card-title" data-i18n="glanceModeTitle">Glance Mode</span>
+                  <span class="mode-card-desc" data-i18n="glanceModeDesc">Dapatkan jawaban AI secara ringkas, cocok
+                    untuk penjelasan cepat dan instan</span>
+                </label>
+
+                <!-- Panel Mode Card -->
+                <label class="mode-card" data-mode="panel">
+                  <input type="radio" name="aiModeChoice" value="panel">
+                  <div class="mode-card-illustration panel-illustration">
+                    <div class="chat-bubble user-bubble">
+                      <div class="bubble-text"></div>
+                    </div>
+                    <div class="chat-bubble ai-bubble">
+                      <img src="../../assets/bubble_ai.png" alt="AI" class="ai-avatar">
+                      <div class="bubble-text"></div>
+                    </div>
+                  </div>
+                  <span class="mode-card-title" data-i18n="panelModeTitle">Panel Mode</span>
+                  <span class="mode-card-desc" data-i18n="panelModeDesc">Dapatkan jawaban AI dan berikan feedback
+                    langsung kepada AI, cocok untuk ruang diskusi</span>
+                </label>
               </div>
             </div>
-            <span class="mode-card-title" data-i18n="glanceModeTitle">Glance Mode</span>
-            <span class="mode-card-desc" data-i18n="glanceModeDesc">Dapatkan jawaban AI secara ringkas, cocok untuk penjelasan cepat dan instan</span>
-          </label>
 
-          <!-- Panel Mode Card -->
-          <label class="mode-card" data-mode="panel">
-            <input type="radio" name="aiModeChoice" value="panel">
-            <div class="mode-card-illustration panel-illustration">
-              <div class="chat-bubble user-bubble">
-                <div class="bubble-text"></div>
+          </div>
+          <!-- LANGUAGE SECTION -->
+          <div id="section-language" class="settings-section">
+            <h2 class="section-header" data-i18n="languageSectionTitle">Language</h2>
+
+            <div class="form-group">
+              <label data-i18n="interfaceLanguageLabel">Interface Language</label>
+              <div class="theme-mode-buttons">
+                <button type="button" class="theme-mode-btn interface-lang-btn" data-lang="en">English</button>
+                <button type="button" class="theme-mode-btn interface-lang-btn" data-lang="id">Bahasa Indonesia</button>
               </div>
-              <div class="chat-bubble ai-bubble">
-                <img src="../../assets/bubble_ai.png" alt="AI" class="ai-avatar">
-                <div class="bubble-text"></div>
-              </div>
+              <div class="input-hint" data-i18n="interfaceLanguageHint">Choose your preferred interface language</div>
             </div>
-            <span class="mode-card-title" data-i18n="panelModeTitle">Panel Mode</span>
-            <span class="mode-card-desc" data-i18n="panelModeDesc">Dapatkan jawaban AI dan berikan feedback langsung kepada AI, cocok untuk ruang diskusi</span>
-          </label>
-        </div>
-      </div>
 
-      </div>
-      <!-- LANGUAGE SECTION -->
-      <div id="section-language" class="settings-section">
-      <h2 class="section-header" data-i18n="languageSectionTitle">Language</h2>
-
-      <div class="form-group">
-        <label data-i18n="interfaceLanguageLabel">Interface Language</label>
-        <div class="theme-mode-buttons">
-          <button type="button" class="theme-mode-btn interface-lang-btn" data-lang="en">English</button>
-          <button type="button" class="theme-mode-btn interface-lang-btn" data-lang="id">Bahasa Indonesia</button>
-        </div>
-        <div class="input-hint" data-i18n="interfaceLanguageHint">Choose your preferred interface language</div>
-      </div>
-
-      <div class="form-group">
-        <label data-i18n="aiLanguageLabel">AI Language</label>
-        <div class="theme-mode-buttons">
-          <button type="button" class="theme-mode-btn ai-lang-btn" data-lang="en">English</button>
-          <button type="button" class="theme-mode-btn ai-lang-btn" data-lang="id">Bahasa Indonesia</button>
-        </div>
-        <div class="input-hint" data-i18n="aiLanguageHint">Language for AI responses and interactions</div>
-      </div>
-
-      </div>
-      <!-- APPEARANCE SECTION -->
-      <div id="section-appearance" class="settings-section">
-      <h2 class="section-header" data-i18n="appearanceSectionTitle">Appearance</h2>
-
-      <div class="form-group theme-mode-group">
-        <label data-i18n="themeModeLabel">Theme Mode</label>
-        <div class="theme-cards">
-          <!-- Light Theme Card -->
-          <label class="theme-card" data-theme="light">
-            <input type="radio" name="themeChoice" value="light">
-            <div class="theme-preview light">
-              <div class="theme-preview-window">
-                <div class="window-dot"></div>
-                <div class="window-dot"></div>
-                <div class="window-dot"></div>
+            <div class="form-group">
+              <label data-i18n="aiLanguageLabel">AI Language</label>
+              <div class="theme-mode-buttons">
+                <button type="button" class="theme-mode-btn ai-lang-btn" data-lang="en">English</button>
+                <button type="button" class="theme-mode-btn ai-lang-btn" data-lang="id">Bahasa Indonesia</button>
               </div>
-              <div class="theme-preview-content">
-                <div class="theme-preview-bar"></div>
-                <div class="theme-preview-bar"></div>
-                <div class="theme-preview-bar"></div>
-              </div>
+              <div class="input-hint" data-i18n="aiLanguageHint">Language for AI responses and interactions</div>
             </div>
-            <div class="theme-card-label">Light</div>
-          </label>
 
-          <!-- Dark Theme Card -->
-          <label class="theme-card" data-theme="dark">
-            <input type="radio" name="themeChoice" value="dark">
-            <div class="theme-preview dark">
-              <div class="theme-preview-window">
-                <div class="window-dot"></div>
-                <div class="window-dot"></div>
-                <div class="window-dot"></div>
+          </div>
+          <!-- APPEARANCE SECTION -->
+          <div id="section-appearance" class="settings-section">
+            <h2 class="section-header" data-i18n="appearanceSectionTitle">Appearance</h2>
+
+            <div class="form-group theme-mode-group">
+              <label data-i18n="themeModeLabel">Theme Mode</label>
+              <div class="theme-cards">
+                <!-- Light Theme Card -->
+                <label class="theme-card" data-theme="light">
+                  <input type="radio" name="themeChoice" value="light">
+                  <div class="theme-preview light">
+                    <div class="theme-preview-window">
+                      <div class="window-dot"></div>
+                      <div class="window-dot"></div>
+                      <div class="window-dot"></div>
+                    </div>
+                    <div class="theme-preview-content">
+                      <div class="theme-preview-bar"></div>
+                      <div class="theme-preview-bar"></div>
+                      <div class="theme-preview-bar"></div>
+                    </div>
+                  </div>
+                  <div class="theme-card-label">Light</div>
+                </label>
+
+                <!-- Dark Theme Card -->
+                <label class="theme-card" data-theme="dark">
+                  <input type="radio" name="themeChoice" value="dark">
+                  <div class="theme-preview dark">
+                    <div class="theme-preview-window">
+                      <div class="window-dot"></div>
+                      <div class="window-dot"></div>
+                      <div class="window-dot"></div>
+                    </div>
+                    <div class="theme-preview-content">
+                      <div class="theme-preview-bar"></div>
+                      <div class="theme-preview-bar"></div>
+                      <div class="theme-preview-bar"></div>
+                    </div>
+                  </div>
+                  <div class="theme-card-label">Dark</div>
+                </label>
+
+                <!-- System Theme Card -->
+                <label class="theme-card" data-theme="system">
+                  <input type="radio" name="themeChoice" value="system">
+                  <div class="theme-preview system">
+                    <div class="theme-preview-half light">
+                      <div class="theme-preview-window">
+                        <div class="window-dot"></div>
+                        <div class="window-dot"></div>
+                        <div class="window-dot"></div>
+                      </div>
+                      <div class="theme-preview-content">
+                        <div class="theme-preview-bar"></div>
+                        <div class="theme-preview-bar"></div>
+                      </div>
+                    </div>
+                    <div class="theme-preview-half dark">
+                      <div class="theme-preview-window">
+                        <div class="window-dot"></div>
+                        <div class="window-dot"></div>
+                        <div class="window-dot"></div>
+                      </div>
+                      <div class="theme-preview-content">
+                        <div class="theme-preview-bar"></div>
+                        <div class="theme-preview-bar"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="theme-card-label">System</div>
+                </label>
               </div>
-              <div class="theme-preview-content">
-                <div class="theme-preview-bar"></div>
-                <div class="theme-preview-bar"></div>
-                <div class="theme-preview-bar"></div>
-              </div>
+              <div class="input-hint" data-i18n="themeModeHint">Gunakan tema terang, gelap, atau ikuti preferensi sistem
+                Anda.</div>
             </div>
-            <div class="theme-card-label">Dark</div>
-          </label>
 
-          <!-- System Theme Card -->
-          <label class="theme-card" data-theme="system">
-            <input type="radio" name="themeChoice" value="system">
-            <div class="theme-preview system">
-              <div class="theme-preview-half light">
-                <div class="theme-preview-window">
-                  <div class="window-dot"></div>
-                  <div class="window-dot"></div>
-                  <div class="window-dot"></div>
+            <div class="form-group">
+              <label class="toggle-row" for="transparentToggle">
+                <input type="checkbox" id="transparentToggle" />
+                <div>
+                  <strong data-i18n="transparentPanelLabel">Transparankan Panel</strong>
+                  <span data-i18n="transparentPanelHint">Membuat panel menjadi semi-transparan</span>
                 </div>
-                <div class="theme-preview-content">
-                  <div class="theme-preview-bar"></div>
-                  <div class="theme-preview-bar"></div>
+              </label>
+
+              <div id="transparencySliderContainer" style="display: none; margin-left: 30px; margin-top: 8px;">
+                <label style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;"
+                  data-i18n="transparencyLevelLabel">Tingkat Transparansi</label>
+                <div class="range-row">
+                  <input type="range" id="transparencySlider" min="0.3" max="1.0" step="0.05" value="0.95" />
+                  <span id="transparencyValue">95%</span>
                 </div>
-              </div>
-              <div class="theme-preview-half dark">
-                <div class="theme-preview-window">
-                  <div class="window-dot"></div>
-                  <div class="window-dot"></div>
-                  <div class="window-dot"></div>
-                </div>
-                <div class="theme-preview-content">
-                  <div class="theme-preview-bar"></div>
-                  <div class="theme-preview-bar"></div>
-                </div>
+                <div class="input-hint" style="margin-top: 4px;" data-i18n="transparencySliderHint">Semakin rendah,
+                  semakin transparan (30% - 100%)</div>
               </div>
             </div>
-            <div class="theme-card-label">System</div>
-          </label>
-        </div>
-        <div class="input-hint" data-i18n="themeModeHint">Gunakan tema terang, gelap, atau ikuti preferensi sistem Anda.</div>
-      </div>
 
-      <div class="form-group">
-        <label class="toggle-row" for="transparentToggle">
-          <input type="checkbox" id="transparentToggle" />
-          <div>
-            <strong data-i18n="transparentPanelLabel">Transparankan Panel</strong>
-            <span data-i18n="transparentPanelHint">Membuat panel menjadi semi-transparan</span>
           </div>
-        </label>
+          <!-- INTEGRATION SECTION -->
+          <div id="section-integration" class="settings-section">
+            <h2 class="section-header" data-i18n="integrationSectionTitle">Integration</h2>
 
-        <div id="transparencySliderContainer" style="display: none; margin-left: 30px; margin-top: 8px;">
-          <label style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;" data-i18n="transparencyLevelLabel">Tingkat Transparansi</label>
-          <div class="range-row">
-            <input type="range" id="transparencySlider" min="0.3" max="1.0" step="0.05" value="0.95" />
-            <span id="transparencyValue">95%</span>
-          </div>
-          <div class="input-hint" style="margin-top: 4px;" data-i18n="transparencySliderHint">Semakin rendah, semakin transparan (30% - 100%)</div>
-        </div>
-      </div>
-
-      </div>
-      <!-- INTEGRATION SECTION -->
-      <div id="section-integration" class="settings-section">
-      <h2 class="section-header" data-i18n="integrationSectionTitle">Integration</h2>
-
-      <div class="form-group">
-        <label data-i18n="integrationChoiceLabel">Connection Type</label>
-        <div style="display:flex; gap:12px; margin-top:8px;">
-          <label><input type="radio" name="integrationChoice" id="integrationFreeRadio" value="free"> Gratis (terbatas)</label>
-          <label><input type="radio" name="integrationChoice" id="integrationCustomRadio" value="custom" checked> Isi URL/API Key</label>
-        </div>
-        <div class="input-hint">Pilih "Gratis" untuk menggunakan opsi terbatas gratis atau pilih "Isi" untuk memasukkan endpoint Anda sendiri.</div>
-      </div>
-
-      <div class="form-group">
-        <label for="apiUrl" data-i18n="apiUrlLabel">API URL</label>
-        <input 
-          type="text" 
-          id="apiUrl" 
-          placeholder="https://api.openai.com/v1/chat/completions"
-          data-i18n-placeholder="apiUrlPlaceholder"
-          required
-        />
-        <div class="preset-buttons">
-          <button type="button" class="preset-btn" data-url="https://api.openai.com/v1/chat/completions">OpenAI</button>
-          <button type="button" class="preset-btn" data-url="https://api.anthropic.com/v1/messages">Anthropic</button>
-        </div>
-        <div class="input-hint" data-i18n="apiUrlHint">
-          The endpoint URL for your AI service (Groq base: https://api.groq.com/openai/v1)
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="apiKey" data-i18n="apiKeyLabel">API Key</label>
-        <input 
-          type="password" 
-          id="apiKey" 
-          placeholder="sk-..."
-          data-i18n-placeholder="apiKeyPlaceholder"
-          required
-        />
-        <div class="input-hint" data-i18n="apiKeyHint">
-          Your API key will be stored securely on your computer
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="modelName" data-i18n="modelLabel">Model</label>
-        <input 
-          type="text" 
-          id="modelName" 
-          placeholder="openai/gpt-oss-20b"
-          data-i18n-placeholder="modelPlaceholder"
-          required
-        />
-        <div class="input-hint" data-i18n="modelHint">
-          Example (Groq): openai/gpt-oss-20b · See https://console.groq.com/docs for the latest list
-        </div>
-      </div>
-
-      </div>
-      <!-- SERVICE SECTION -->
-      <div id="section-service" class="settings-section">
-      <h2 class="section-header" data-i18n="serviceSectionTitle">Service</h2>
-
-      <div class="form-group">
-        <label class="toggle-row" for="runInBackgroundToggle">
-          <input type="checkbox" id="runInBackgroundToggle" />
-          <div>
-            <strong data-i18n="runInBackgroundLabel">Run PingoAI in background when closing the app</strong>
-            <span data-i18n="runInBackgroundHint">The app will stay in system tray instead of fully quitting</span>
-          </div>
-        </label>
-      </div>
-
-      <div class="form-group">
-        <label class="toggle-row" for="autoStartToggle">
-          <input type="checkbox" id="autoStartToggle" />
-          <div>
-            <strong data-i18n="autoStartLabel">Launch PingoAI automatically on system startup</strong>
-            <span data-i18n="autoStartHint">PingoAI will start automatically when your computer boots up</span>
-          </div>
-        </label>
-      </div>
-
-      <div class="form-group">
-        <label for="autoHideDuration" data-i18n="autoHideDurationLabel">Hide Pingo pop up if no interaction for</label>
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <input 
-            type="number" 
-            id="autoHideDuration" 
-            min="1" 
-            max="60" 
-            value="4"
-            required
-            style="max-width: 120px;"
-          />
-          <span style="color: var(--text-secondary); font-size: 14px;" data-i18n="secondsUnit">seconds</span>
-        </div>
-        <div class="input-hint" data-i18n="autoHideDurationHint">
-          Default is 4 seconds.
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label class="toggle-row" for="allowDuplicateTextToggle">
-          <input type="checkbox" id="allowDuplicateTextToggle" />
-          <div>
-            <strong data-i18n="allowDuplicateTextLabel">Izinkan Pingo memproses teks yang sama dua kali berturut-turut</strong>
-            <span data-i18n="allowDuplicateTextHint">Ketika aktif, Anda dapat copy-paste dan meminta AI menganalisis teks yang sama hingga 2 kali</span>
-          </div>
-        </label>
-      </div>
-
-
-      </div>
-      <!-- WINDOW SETTINGS SECTION -->
-      <div id="section-window" class="settings-section">
-      <h2 class="section-header" data-i18n="windowSectionTitle">Window Settings</h2>
-
-      <div class="form-group">
-        <label class="toggle-row" for="alwaysOnTopToggle">
-          <input type="checkbox" id="alwaysOnTopToggle" />
-          <div>
-            <strong data-i18n="alwaysOnTopLabel">Always on Top</strong>
-            <span data-i18n="alwaysOnTopHint">Panel selalu tampil di atas window lain</span>
-          </div>
-        </label>
-      </div>
-
-      <div class="window-grid">
-        <div class="form-group">
-          <label for="panelPosition" data-i18n="panelPositionLabel">Panel Position</label>
-          <select id="panelPosition">
-            <option value="right" data-i18n="panelPositionRight">Right</option>
-            <option value="left" data-i18n="panelPositionLeft">Left</option>
-            <option value="top" data-i18n="panelPositionTop">Top</option>
-            <option value="bottom" data-i18n="panelPositionBottom">Bottom</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="panelWidth" data-i18n="panelSizeLabel">Panel Size (300-600px)</label>
-          <div class="range-row">
-            <input type="range" id="panelWidth" min="300" max="600" step="10" value="400" />
-            <span id="panelWidthValue">400px</span>
-          </div>
-          <div class="input-hint" data-i18n="panelSizeHint">Top/bottom positions use this value as height.</div>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label data-i18n="shortcutsLabel">Keyboard Shortcuts</label>
-        <div class="input-hint" style="margin-bottom: 12px;" data-i18n="shortcutsHint">Customize keyboard shortcuts for quick access</div>
-        
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-          <div>
-            <label style="font-size: 13px; margin-bottom: 4px;" data-i18n="toggleChatLabel">💡 Toggle Chat Window</label>
-            <div class="shortcut-row">
-              <div class="shortcut-display" id="shortcutDisplay">Ctrl+Alt+A</div>
-              <button type="button" class="ghost-btn" id="changeShortcutBtn" data-i18n="changeShortcutButton">Change</button>
+            <div class="form-group">
+              <label data-i18n="integrationChoiceLabel">Connection Type</label>
+              <div style="display:flex; gap:12px; margin-top:8px;">
+                <label><input type="radio" name="integrationChoice" id="integrationFreeRadio" value="free"> <span data-i18n="integrationFreeOption">Free (limited)</span></label>
+                <label><input type="radio" name="integrationChoice" id="integrationCustomRadio" value="custom" checked>
+                  <span data-i18n="integrationCustomOption">Custom URL/API Key</span></label>
+              </div>
+              <div class="input-hint" data-i18n="integrationChoiceHint">Choose "Free" to use limited free option or choose "Custom" to enter your own endpoint.</div>
             </div>
-            <div class="input-hint" data-i18n="toggleChatHint">Show/hide the main chat panel</div>
-          </div>
 
-          <div>
-            <label style="font-size: 13px; margin-bottom: 4px;" data-i18n="openSettingsLabel">⚙️ Open Settings</label>
-            <div class="shortcut-row">
-              <div class="shortcut-display" id="settingsShortcutDisplay">Ctrl+Shift+S</div>
-              <button type="button" class="ghost-btn" id="changeSettingsShortcutBtn" data-i18n="changeShortcutButton">Change</button>
+            <!-- TAMBAHAN BARU: Progress Bar Limit -->
+            <div id="freeIntegrationLimitInfo" style="display: none; margin-top: 16px;">
+              <div style="display:flex; flex-direction:column; gap:12px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                <label style="font-size:13px; color:var(--text-secondary); margin:0;" data-i18n="premiumRequestLabel">
+                Premium Request
+                </label>
+                <span id="premiumRequestCount" style="font-weight:600; color:var(--text-primary); font-size:13px; min-width:60px; text-align:right;">100/100</span>
+              </div>
+
+              <div style="display:flex; align-items:center; gap:12px;">
+                <div style="flex:1; height:8px; background:var(--bg-secondary); border-radius:999px; overflow:hidden;">
+                <div id="premiumRequestBar" style="height:100%; width:100%; background:var(--orange); transition:width 0.3s ease;"></div>
+                </div>
+              </div>
+
+              <div style="display:flex; gap:10px; align-items:flex-start; padding:12px; border-radius:10px; background:transparent; border:1px solid var(--border-color); color:var(--text-secondary); font-size:13px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="flex-shrink:0; color:var(--orange);">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.2" fill="rgba(255,107,53,0.06)"/>
+                <path d="M11 10h2v6h-2zM11 7h2v1h-2z" fill="currentColor"/>
+                </svg>
+                <div style="display:flex; flex-direction:column; gap:6px; color:var(--text-secondary);">
+                <div style="font-weight:600; color:var(--text-primary); font-size:13px;" data-i18n="premiumRequestTitle">Premium Request</div>
+                <div style="font-size:12px; line-height:1.4;" data-i18n="premiumRequestDesc">
+                  Requests to premium model <code style="background:transparent; padding:0 4px; border-radius:4px;">openai/gpt-oss-120b</code>.
+                  You get 100 free requests per day. If quota is depleted, it will automatically fallback to <code style="background:transparent; padding:0 4px; border-radius:4px;">llama-3.1-8b-instant</code>. Quota resets daily at 00:00.
+                </div>
+                </div>
+              </div>
+              </div>
             </div>
-            <div class="input-hint" data-i18n="openSettingsHint">Open settings window anytime</div>
-          </div>
+            <!-- AKHIR TAMBAHAN -->
 
-          <div>
-            <label style="font-size: 13px; margin-bottom: 4px;" data-i18n="showBubbleLabel">🔍 Show AI Bubble</label>
-            <div class="shortcut-row">
-              <div class="shortcut-display" id="bubbleShortcutDisplay">Ctrl+Shift+X</div>
-              <button type="button" class="ghost-btn" id="changeBubbleShortcutBtn" data-i18n="changeShortcutButton">Change</button>
+            <div class="form-group">
+              <label for="apiUrl" data-i18n="apiUrlLabel">API URL</label> <input type="text" id="apiUrl"
+                placeholder="https://api.openai.com/v1/chat/completions" data-i18n-placeholder="apiUrlPlaceholder"
+                required />
+              <div class="preset-buttons">
+                <button type="button" class="preset-btn"
+                  data-url="https://api.openai.com/v1/chat/completions">OpenAI</button>
+                <button type="button" class="preset-btn"
+                  data-url="https://api.anthropic.com/v1/messages">Anthropic</button>
+              </div>
+              <div class="input-hint" data-i18n="apiUrlHint">
+                The endpoint URL for your AI service (Groq base: https://api.groq.com/openai/v1)
+              </div>
             </div>
-            <div class="input-hint" data-i18n="showBubbleHint">Show AI bubble for selected text</div>
+
+            <div class="form-group">
+              <label for="apiKey" data-i18n="apiKeyLabel">API Key</label>
+              <input type="password" id="apiKey" placeholder="sk-..." data-i18n-placeholder="apiKeyPlaceholder"
+                required />
+              <div class="input-hint" data-i18n="apiKeyHint">
+                Your API key will be stored securely on your computer
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="modelName" data-i18n="modelLabel">Model</label>
+              <input type="text" id="modelName" placeholder="openai/gpt-oss-20b"
+                data-i18n-placeholder="modelPlaceholder" required />
+              <div class="input-hint" data-i18n="modelHint">
+                Example (Groq): openai/gpt-oss-20b · See https://console.groq.com/docs for the latest list
+              </div>
+            </div>
+
           </div>
-        </div>
-      </div>
+          <!-- SERVICE SECTION -->
+          <div id="section-service" class="settings-section">
+            <h2 class="section-header" data-i18n="serviceSectionTitle">Service</h2>
 
-      <div class="form-group" style="display: none;">
-        <label data-i18n="textSelectionLabel">Text Selection Bubble</label>
-        <div class="toggle-control">
-          <input type="checkbox" id="highlightWatcherToggle" />
-          <span data-i18n="textSelectionToggleHint">Munculkan bubble otomatis saat teks di-highlight (tanpa copy)</span>
-        </div>
-        <div class="input-hint" data-i18n="textSelectionHint">Hanya tersedia di Windows dan membutuhkan modul HighlightWatcher (jalankan "npm run watcher:build").</div>
-      </div>
+            <div class="form-group">
+              <label class="toggle-row" for="runInBackgroundToggle">
+                <input type="checkbox" id="runInBackgroundToggle" />
+                <div>
+                  <strong data-i18n="runInBackgroundLabel">Run PingoAI in background when closing the app</strong>
+                  <span data-i18n="runInBackgroundHint">The app will stay in system tray instead of fully
+                    quitting</span>
+                </div>
+              </label>
+            </div>
 
-      </div>
-      <div class="divider"></div>
+            <div class="form-group">
+              <label class="toggle-row" for="autoStartToggle">
+                <input type="checkbox" id="autoStartToggle" />
+                <div>
+                  <strong data-i18n="autoStartLabel">Launch PingoAI automatically on system startup</strong>
+                  <span data-i18n="autoStartHint">PingoAI will start automatically when your computer boots up</span>
+                </div>
+              </label>
+            </div>
 
-      <div class="button-group">
-        <button type="button" class="btn-secondary" id="testBtn" data-i18n="testConnectionButton">Test Connection</button>
-        <button type="submit" class="btn-primary" data-i18n="saveSettingsButton">Apply Settings</button>
-      </div>
-      <div style="height: 100px;"></div>
-    </form>
+            <div class="form-group">
+              <label for="autoHideDuration" data-i18n="autoHideDurationLabel">Hide Pingo pop up if no interaction
+                for</label>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <input type="number" id="autoHideDuration" min="1" max="60" value="4" required
+                  style="max-width: 120px;" />
+                <span style="color: var(--text-secondary); font-size: 14px;" data-i18n="secondsUnit">seconds</span>
+              </div>
+              <div class="input-hint" data-i18n="autoHideDurationHint">
+                Default is 4 seconds.
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="toggle-row" for="allowDuplicateTextToggle">
+                <input type="checkbox" id="allowDuplicateTextToggle" />
+                <div>
+                  <strong data-i18n="allowDuplicateTextLabel">Izinkan Pingo memproses teks yang sama dua kali
+                    berturut-turut</strong>
+                  <span data-i18n="allowDuplicateTextHint">Ketika aktif, Anda dapat copy-paste dan meminta AI
+                    menganalisis teks yang sama hingga 2 kali</span>
+                </div>
+              </label>
+            </div>
+
+
+          </div>
+          <!-- WINDOW SETTINGS SECTION -->
+          <div id="section-window" class="settings-section">
+            <h2 class="section-header" data-i18n="windowSectionTitle">Window Settings</h2>
+
+            <div class="form-group">
+              <label class="toggle-row" for="alwaysOnTopToggle">
+                <input type="checkbox" id="alwaysOnTopToggle" />
+                <div>
+                  <strong data-i18n="alwaysOnTopLabel">Always on Top</strong>
+                  <span data-i18n="alwaysOnTopHint">Panel selalu tampil di atas window lain</span>
+                </div>
+              </label>
+            </div>
+
+            <div class="window-grid">
+              <div class="form-group">
+                <label for="panelPosition" data-i18n="panelPositionLabel">Panel Position</label>
+                <select id="panelPosition">
+                  <option value="right" data-i18n="panelPositionRight">Right</option>
+                  <option value="left" data-i18n="panelPositionLeft">Left</option>
+                  <option value="top" data-i18n="panelPositionTop">Top</option>
+                  <option value="bottom" data-i18n="panelPositionBottom">Bottom</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="panelWidth" data-i18n="panelSizeLabel">Panel Size (300-600px)</label>
+                <div class="range-row">
+                  <input type="range" id="panelWidth" min="300" max="600" step="10" value="400" />
+                  <span id="panelWidthValue">400px</span>
+                </div>
+                <div class="input-hint" data-i18n="panelSizeHint">Top/bottom positions use this value as height.</div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label data-i18n="shortcutsLabel">Keyboard Shortcuts</label>
+              <div class="input-hint" style="margin-bottom: 12px;" data-i18n="shortcutsHint">Customize keyboard
+                shortcuts for quick access</div>
+
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div>
+                  <label style="font-size: 13px; margin-bottom: 4px;" data-i18n="toggleChatLabel">💡 Toggle Chat
+                    Window</label>
+                  <div class="shortcut-row">
+                    <div class="shortcut-display" id="shortcutDisplay">Ctrl+Alt+A</div>
+                    <button type="button" class="ghost-btn" id="changeShortcutBtn"
+                      data-i18n="changeShortcutButton">Change</button>
+                  </div>
+                  <div class="input-hint" data-i18n="toggleChatHint">Show/hide the main chat panel</div>
+                </div>
+
+                <div>
+                  <label style="font-size: 13px; margin-bottom: 4px;" data-i18n="openSettingsLabel">⚙️ Open
+                    Settings</label>
+                  <div class="shortcut-row">
+                    <div class="shortcut-display" id="settingsShortcutDisplay">Ctrl+Shift+S</div>
+                    <button type="button" class="ghost-btn" id="changeSettingsShortcutBtn"
+                      data-i18n="changeShortcutButton">Change</button>
+                  </div>
+                  <div class="input-hint" data-i18n="openSettingsHint">Open settings window anytime</div>
+                </div>
+
+                <div>
+                  <label style="font-size: 13px; margin-bottom: 4px;" data-i18n="showBubbleLabel">🔍 Show AI
+                    Bubble</label>
+                  <div class="shortcut-row">
+                    <div class="shortcut-display" id="bubbleShortcutDisplay">Ctrl+Shift+X</div>
+                    <button type="button" class="ghost-btn" id="changeBubbleShortcutBtn"
+                      data-i18n="changeShortcutButton">Change</button>
+                  </div>
+                  <div class="input-hint" data-i18n="showBubbleHint">Show AI bubble for selected text</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group" style="display: none;">
+              <label data-i18n="textSelectionLabel">Text Selection Bubble</label>
+              <div class="toggle-control">
+                <input type="checkbox" id="highlightWatcherToggle" />
+                <span data-i18n="textSelectionToggleHint">Munculkan bubble otomatis saat teks di-highlight (tanpa
+                  copy)</span>
+              </div>
+              <div class="input-hint" data-i18n="textSelectionHint">Hanya tersedia di Windows dan membutuhkan modul
+                HighlightWatcher (jalankan "npm run watcher:build").</div>
+            </div>
+
+          </div>
+          <div class="divider"></div>
+
+          <div class="button-group">
+            <button type="button" class="btn-secondary" id="testBtn" data-i18n="testConnectionButton">Test
+              Connection</button>
+            <button type="submit" class="btn-primary" data-i18n="saveSettingsButton">Apply Settings</button>
+          </div>
+          <div style="height: 100px;"></div>
+        </form>
       </div>
     </div>
   </div>
@@ -1464,7 +1555,7 @@
           section.classList.remove('active');
         }
       });
-      
+
       // Scroll content to top
       const contentArea = document.querySelector('.settings-content');
       if (contentArea) contentArea.scrollTop = 0;
@@ -1518,7 +1609,7 @@
     function showToast(title, message, type = 'success') {
       const toast = document.createElement('div');
       toast.className = `toast ${type}`;
-      
+
       toast.innerHTML = `
         <div class="toast-content">
           <div class="toast-title">${title}</div>
@@ -1598,6 +1689,8 @@
         autoHideDurationLabel: 'Hide Pingo pop up if no interaction for',
         secondsUnit: 'seconds',
         autoHideDurationHint: 'Default is 4 seconds.',
+        allowDuplicateTextLabel: 'Allow Pingo to process the same text twice in a row',
+        allowDuplicateTextHint: 'When enabled, you can copy-paste and ask AI to analyze the same text up to 2 times. Requires HighlightWatcher.',
         windowSectionTitle: 'Window Settings',
         alwaysOnTopLabel: 'Always on Top',
         alwaysOnTopHint: 'Keep the panel above other windows',
@@ -1634,7 +1727,14 @@
         unknownErrorLabel: 'Unknown error',
         glanceModeWarningTitle: 'Glance Mode Requirement',
         glanceModeWarningMsg: 'Glance Mode requires PingoAI to run in the background to function correctly. This setting cannot be disabled while in Glance Mode.',
-        glanceModeWarningBtn: 'Understood'
+        glanceModeWarningBtn: 'Understood',
+        integrationChoiceLabel: 'Connection Type',
+        integrationFreeOption: 'Free (limited)',
+        integrationCustomOption: 'Custom URL/API Key',
+        integrationChoiceHint: 'Choose "Free" to use limited free option or choose "Custom" to enter your own endpoint.',
+        premiumRequestLabel: 'Premium Request',
+        premiumRequestTitle: 'Premium Request',
+        premiumRequestDesc: 'Requests to premium model <code style="background:transparent; padding:0 4px; border-radius:4px;">openai/gpt-oss-120b</code>. You get 100 free requests per day. If quota is depleted, it will automatically fallback to <code style="background:transparent; padding:0 4px; border-radius:4px;">llama-3.1-8b-instant</code>. Quota resets daily at 00:00.'
       },
       id: {
         aiModeSectionTitle: 'Mode AI',
@@ -1681,6 +1781,8 @@
         autoHideDurationLabel: 'Sembunyikan pop up pingo jika tidak ada interaksi selama',
         secondsUnit: 'detik',
         autoHideDurationHint: 'Default adalah 4 detik.',
+        allowDuplicateTextLabel: 'Izinkan Pingo memproses teks yang sama dua kali berturut-turut',
+        allowDuplicateTextHint: 'Ketika aktif, Anda dapat copy-paste dan meminta AI menganalisis teks yang sama hingga 2 kali. Memerlukan HighlightWatcher.',
         windowSectionTitle: 'Pengaturan Jendela',
         alwaysOnTopLabel: 'Selalu di Atas',
         alwaysOnTopHint: 'Panel selalu berada di atas jendela lain',
@@ -1705,6 +1807,13 @@
         textSelectionHint: 'Hanya tersedia di Windows dan perlu HighlightWatcher (jalankan "npm run watcher:build").',
         testConnectionButton: 'Tes Koneksi',
         saveSettingsButton: 'Terapkan',
+        integrationChoiceLabel: 'Tipe Koneksi',
+        integrationFreeOption: 'Gratis (terbatas)',
+        integrationCustomOption: 'Isi URL/API Key',
+        integrationChoiceHint: 'Pilih "Gratis" untuk menggunakan opsi terbatas gratis atau pilih "Isi" untuk memasukkan endpoint Anda sendiri.',
+        premiumRequestLabel: 'Premium Request',
+        premiumRequestTitle: 'Premium Request',
+        premiumRequestDesc: 'Permintaan ke model premium <code style="background:transparent; padding:0 4px; border-radius:4px;">openai/gpt-oss-120b</code>. Anda mendapatkan 100 request gratis per hari. Jika kuota habis, akan otomatis fallback ke <code style="background:transparent; padding:0 4px; border-radius:4px;">llama-3.1-8b-instant</code>. Kuota reset setiap hari pukul 00:00.',
         testButtonWorking: 'Sedang tes...',
         testSuccessTitle: 'Koneksi Berhasil',
         testSuccessMessage: 'Koneksi berhasil! AI siap digunakan.',
@@ -1791,7 +1900,7 @@
         if (radio) {
           radio.checked = true;
           aiMode = radio.value;
-          
+
           // Enforce run in background for Glance Mode
           if (aiMode === 'glance') {
             servicePreferences.runInBackground = true;
@@ -1834,11 +1943,11 @@
         if (radio) {
           radio.checked = true;
         }
-        
+
         // Update selected state
         themeCards.forEach(c => c.classList.remove('selected'));
         card.classList.add('selected');
-        
+
         // Apply theme
         setThemeMode(selectedMode);
       });
@@ -1855,11 +1964,11 @@
       apiUrlInput.value = settings.apiUrl || 'https://api.openai.com/v1/chat/completions';
       apiKeyInput.value = settings.apiKey || '';
       modelInput.value = settings.model || 'gpt-3.5-turbo';
-      
+
       // Load theme state
       const storedThemeMode = settings.themeMode || localStorage.getItem('themeMode') || (settings.darkMode ? 'dark' : 'light');
       setThemeMode(storedThemeMode);
-      
+
       // Load window state from chat window
       const windowState = await window.electronAPI.getWindowState();
       if (windowState.success) {
@@ -1877,13 +1986,13 @@
           settings.windowSettings.bubbleShortcut = windowState.bubbleShortcut;
         }
       }
-      
+
       hydrateWindowPreferences(settings.windowSettings);
       hydrateSelectionPreferences(settings.selectionSettings);
       hydrateLanguagePreferences(settings.languageSettings);
       hydrateServicePreferences(settings.serviceSettings);
       hydrateAIModePreferences(settings.aiModeSettings);
-      
+
       // Load integration type
       if (settings.integration && settings.integration.type === 'free') {
         integrationFreeRadio.checked = true;
@@ -1902,7 +2011,7 @@
     transparentToggle.addEventListener('change', () => {
       windowPreferences.transparent = transparentToggle.checked;
       transparencySliderContainer.style.display = transparentToggle.checked ? 'block' : 'none';
-      
+
       // Preview transparency on settings window
       if (transparentToggle.checked) {
         window.electronAPI.setWindowOpacity(windowPreferences.opacity);
@@ -1915,7 +2024,7 @@
       const value = parseFloat(transparencySlider.value);
       windowPreferences.opacity = value;
       transparencyValue.textContent = Math.round(value * 100) + '%';
-      
+
       // Live preview on settings window
       if (transparentToggle.checked) {
         window.electronAPI.setWindowOpacity(value);
@@ -1928,7 +2037,7 @@
 
     panelPositionSelect.addEventListener('change', () => {
       windowPreferences.dockPosition = panelPositionSelect.value;
-      
+
       // Preview position change
       if (!isPreviewingPanelSize) {
         originalPanelPosition = windowPreferences.dockPosition;
@@ -1941,14 +2050,14 @@
       windowPreferences.dockSize = value;
       panelWidthSlider.value = value;
       panelWidthValue.textContent = `${value}px`;
-      
+
       // Start preview mode on first change
       if (!isPreviewingPanelSize) {
         isPreviewingPanelSize = true;
         originalPanelSize = value;
         originalPanelPosition = windowPreferences.dockPosition;
       }
-      
+
       // Live preview
       window.electronAPI.previewPanelSize(value, windowPreferences.dockPosition);
     });
@@ -1958,7 +2067,7 @@
         textSelectionPreferences.autoBubbleOnHighlight = highlightWatcherToggle.checked;
       });
     }
-    
+
     // Integration type toggle
     async function loadFreeIntegrationDefaults() {
       try {
@@ -1991,29 +2100,76 @@
       const apiUrlGroup = apiUrlInput.closest('.form-group');
       const apiKeyGroup = apiKeyInput.closest('.form-group');
       const modelGroup = modelInput.closest('.form-group');
+      const limitInfo = document.getElementById('freeIntegrationLimitInfo'); // TAMBAHAN
 
       if (isFree) {
         if (apiUrlGroup) apiUrlGroup.style.display = 'none';
         if (apiKeyGroup) apiKeyGroup.style.display = 'none';
         if (modelGroup) modelGroup.style.display = 'none';
+        if (limitInfo) {  // TAMBAHAN
+          limitInfo.style.display = 'block';  // TAMBAHAN
+          loadRequestLimit();  // TAMBAHAN - panggil fungsi load
+        }  // TAMBAHAN
         applyFreeIntegrationDefaults();
       } else {
         if (apiUrlGroup) apiUrlGroup.style.display = 'block';
         if (apiKeyGroup) apiKeyGroup.style.display = 'block';
         if (modelGroup) modelGroup.style.display = 'block';
-        
+        if (limitInfo) limitInfo.style.display = 'none'; // TAMBAHAN
+
         apiUrlInput.disabled = false;
         apiKeyInput.disabled = false;
         modelInput.disabled = false;
       }
     }
-    
+
+    // TAMBAHAN BARU: Function untuk load request limit dari main process
+    async function loadRequestLimit() {
+      try {
+        const stats = await window.electronAPI.getRequestStats();
+        
+        if (!stats || !stats.success) {
+          console.warn('Failed to get request stats');
+          return;
+        }
+
+        const used = stats.used || 0;
+        const remaining = stats.remaining || 0;
+        const percentage = (remaining / stats.total) * 100;
+
+        const bar = document.getElementById('premiumRequestBar');
+        const count = document.getElementById('premiumRequestCount');
+
+        if (bar) {
+          bar.style.width = percentage + '%';
+          if (percentage <= 0) {
+            bar.classList.add('depleted');
+            bar.classList.remove('low');
+          } else if (percentage <= 20) {
+            bar.classList.add('low');
+            bar.classList.remove('depleted');
+          } else {
+            bar.classList.remove('low', 'depleted');
+          }
+        }
+
+        if (count) {
+          count.textContent = remaining + '/' + stats.total;
+        }
+        
+        console.log(`📊 Request stats: ${used} used, ${remaining} remaining, model: ${stats.currentModel}`);
+      } catch (error) {
+        console.error('Error loading request limit:', error);
+      }
+    }
+    // AKHIR TAMBAHAN
+
     integrationFreeRadio.addEventListener('change', () => {
       if (integrationFreeRadio.checked) {
         toggleIntegrationFields(true);
       }
     });
-    
+
     integrationCustomRadio.addEventListener('change', () => {
       if (integrationCustomRadio.checked) {
         toggleIntegrationFields(false);
@@ -2075,7 +2231,7 @@
       buttonElement.disabled = true;
       buttonElement.textContent = getTranslation('listeningLabel');
       displayElement.textContent = getTranslation('pressNewShortcutLabel');
-      
+
       shortcutListener = (event) => {
         event.preventDefault();
         if (event.key === 'Escape') {
@@ -2087,7 +2243,7 @@
           displayElement.textContent = getTranslation('includeLetterMessage');
           return;
         }
-        
+
         // Update the appropriate shortcut
         if (type === 'toggle') {
           windowPreferences.toggleShortcut = accelerator;
@@ -2096,7 +2252,7 @@
         } else if (type === 'bubble') {
           windowPreferences.bubbleShortcut = accelerator;
         }
-        
+
         displayElement.textContent = formatShortcutLabel(accelerator);
         endShortcutCapture(true, displayElement, buttonElement);
       };
@@ -2121,7 +2277,7 @@
 
       try {
         const result = await window.electronAPI.testAiConnection({ apiUrl, apiKey, model });
-        
+
         if (result.success) {
           showToast(t.testSuccessTitle, t.testSuccessMessage, 'success');
         } else {
@@ -2138,56 +2294,56 @@
     // Save Settings Handler
     settingsForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      
+
       const t = translations[languagePreferences.interfaceLanguage] || translations.en;
 
-        const isDark = themeMode === 'dark' || (themeMode === 'system' && prefersDarkScheme.matches);
+      const isDark = themeMode === 'dark' || (themeMode === 'system' && prefersDarkScheme.matches);
 
-        const newSettings = {
-          apiUrl: apiUrlInput.value.trim(),
-          apiKey: apiKeyInput.value.trim(),
-          model: modelInput.value.trim(),
-          themeMode: themeMode,
-          darkMode: isDark,
-          windowSettings: {
-            transparent: transparentToggle.checked,
-            alwaysOnTop: alwaysOnTopToggle.checked,
-            dockPosition: panelPositionSelect.value,
-            dockSize: parseInt(panelWidthSlider.value),
-            toggleShortcut: shortcutDisplay.innerText,
-            settingsShortcut: settingsShortcutDisplay.innerText,
-            bubbleShortcut: bubbleShortcutDisplay.innerText,
-            opacity: parseFloat(transparencySlider.value)
-          },
-          textSelection: {
-            autoBubbleOnHighlight: highlightWatcherToggle ? highlightWatcherToggle.checked : false
-          },
-          serviceSettings: {
-            runInBackground: runInBackgroundToggle.checked,
-            autoStart: autoStartToggle.checked,
-            autoHideDuration: parseInt(autoHideDurationInput.value) || 4,
-            allowDuplicateText: allowDuplicateTextToggle.checked
-          },
-          languageSettings: languagePreferences,
-          aiModeSettings: {
-            mode: aiMode
-          },
-          integration: {
-            type: integrationFreeRadio.checked ? 'free' : 'custom'
-          }
-        };
+      const newSettings = {
+        apiUrl: apiUrlInput.value.trim(),
+        apiKey: apiKeyInput.value.trim(),
+        model: modelInput.value.trim(),
+        themeMode: themeMode,
+        darkMode: isDark,
+        windowSettings: {
+          transparent: transparentToggle.checked,
+          alwaysOnTop: alwaysOnTopToggle.checked,
+          dockPosition: panelPositionSelect.value,
+          dockSize: parseInt(panelWidthSlider.value),
+          toggleShortcut: shortcutDisplay.innerText,
+          settingsShortcut: settingsShortcutDisplay.innerText,
+          bubbleShortcut: bubbleShortcutDisplay.innerText,
+          opacity: parseFloat(transparencySlider.value)
+        },
+        textSelection: {
+          autoBubbleOnHighlight: highlightWatcherToggle ? highlightWatcherToggle.checked : false
+        },
+        serviceSettings: {
+          runInBackground: runInBackgroundToggle.checked,
+          autoStart: autoStartToggle.checked,
+          autoHideDuration: parseInt(autoHideDurationInput.value) || 4,
+          allowDuplicateText: allowDuplicateTextToggle.checked
+        },
+        languageSettings: languagePreferences,
+        aiModeSettings: {
+          mode: aiMode
+        },
+        integration: {
+          type: integrationFreeRadio.checked ? 'free' : 'custom'
+        }
+      };
 
       try {
         const result = await window.electronAPI.saveSettings(newSettings);
         if (result.success) {
           const applyResult = await window.electronAPI.applySettings(newSettings);
-          
+
           if (applyResult.success) {
             // Force theme update if system theme changed
             if (themeMode === 'system') {
               syncBodyTheme();
             }
-            
+
             // Persist language
             persistLanguageLocalStorage();
             originalLanguagePreferences.interfaceLanguage = languagePreferences.interfaceLanguage;
@@ -2270,13 +2426,16 @@
     function hydrateAIModePreferences(preferences = {}) {
       aiMode = preferences.mode || 'glance';
       renderAIModePreferences();
-      
+
       // Initial check for Glance Mode enforcement
       if (aiMode === 'glance') {
         servicePreferences.runInBackground = true;
         runInBackgroundToggle.checked = true;
-        // We don't disable the input here to allow the click event to trigger the warning
-        // But we can visually indicate it's important
+        runInBackgroundToggle.disabled = true;
+        runInBackgroundToggle.closest('.toggle-control')?.classList.add('disabled');
+      } else {
+        runInBackgroundToggle.disabled = false;
+        runInBackgroundToggle.closest('.toggle-control')?.classList.remove('disabled');
       }
     }
 
@@ -2485,7 +2644,12 @@
         const key = el.getAttribute('data-i18n');
         const localized = dictionary[key] ?? translations.en[key];
         if (typeof localized === 'string') {
-          el.textContent = localized;
+          // Check if the translation contains HTML tags
+          if (localized.includes('<') && localized.includes('>')) {
+            el.innerHTML = localized;
+          } else {
+            el.textContent = localized;
+          }
         }
       });
 
@@ -2523,4 +2687,5 @@
     }
   </script>
 </body>
+
 </html>

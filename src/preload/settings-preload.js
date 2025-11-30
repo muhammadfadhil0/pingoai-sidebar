@@ -12,5 +12,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   restorePanelSize: () => ipcRenderer.invoke('restore-panel-size'),
   closeSettingsWindow: () => ipcRenderer.invoke('close-settings-window'),
   getFreeIntegrationDefaults: () => ipcRenderer.invoke('get-free-integration-defaults'),
-  testAiConnection: (config) => ipcRenderer.invoke('test-ai-connection', config)
+  testAiConnection: (config) => ipcRenderer.invoke('test-ai-connection', config),
+  getRequestStats: () => ipcRenderer.invoke('get-request-stats'),
 });

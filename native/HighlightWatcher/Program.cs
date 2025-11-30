@@ -8,17 +8,48 @@ namespace HighlightWatcher;
 
 internal static class Program
 {
+    [DllImport("user32.dll")]
+    private static extern int GetMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax);
+    
+    [DllImport("user32.dll")]
+    private static extern bool TranslateMessage(ref MSG lpMsg);
+    
+    [DllImport("user32.dll")]
+    private static extern IntPtr DispatchMessage(ref MSG lpMsg);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MSG
+    {
+        public IntPtr hwnd;
+        public uint message;
+        public IntPtr wParam;
+        public IntPtr lParam;
+        public uint time;
+        public POINT pt;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT
+    {
+        public int x;
+        public int y;
+    }
+
+    private static bool _running = true;
+
     private static void Main()
     {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
         Console.Error.WriteLine("[INIT] HighlightWatcher starting...");
         
         using var watcher = new SelectionWatcher();
+        using var keyboardWatcher = new KeyboardWatcher();
 
         try
         {
             watcher.Start();
-            Console.Error.WriteLine("[INIT] Watcher started. Monitoring for text selection...");
+            keyboardWatcher.Start();
+            Console.Error.WriteLine("[INIT] Watcher started. Monitoring for text selection and keyboard...");
         }
         catch (Exception ex)
         {
@@ -26,16 +57,135 @@ internal static class Program
             return;
         }
 
-        var exitEvent = new ManualResetEvent(false);
         Console.CancelKeyPress += (_, args) =>
         {
             args.Cancel = true;
-            exitEvent.Set();
+            _running = false;
         };
 
-        exitEvent.WaitOne();
+        // Message loop - required for low-level keyboard hooks to work
+        Console.Error.WriteLine("[INIT] Starting message loop...");
+        while (_running && GetMessage(out MSG msg, IntPtr.Zero, 0, 0) > 0)
+        {
+            TranslateMessage(ref msg);
+            DispatchMessage(ref msg);
+        }
+        
         Console.Error.WriteLine("[INIT] Shutting down...");
     }
+}
+
+// Keyboard Watcher untuk mendeteksi Ctrl+C
+internal sealed class KeyboardWatcher : IDisposable
+{
+    private const int WH_KEYBOARD_LL = 13;
+    private const int WM_KEYDOWN = 0x0100;
+    private const int VK_C = 0x43;
+    private const int VK_CONTROL = 0x11;
+    
+    private readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
+
+    private LowLevelKeyboardProc? _proc;
+    private IntPtr _hookId = IntPtr.Zero;
+    private DateTimeOffset _lastCtrlCTimestamp = DateTimeOffset.MinValue;
+    private const int CtrlCDebounceMs = 300; // Debounce untuk mencegah double trigger
+
+    public void Start()
+    {
+        _proc = HookCallback;
+        _hookId = SetHook(_proc);
+        
+        if (_hookId == IntPtr.Zero)
+        {
+            Console.Error.WriteLine("[KEYBOARD] Warning: Failed to set keyboard hook");
+        }
+        else
+        {
+            Console.Error.WriteLine("[KEYBOARD] Keyboard hook installed successfully");
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_hookId != IntPtr.Zero)
+        {
+            UnhookWindowsHookEx(_hookId);
+            _hookId = IntPtr.Zero;
+        }
+        GC.SuppressFinalize(this);
+    }
+
+    private IntPtr SetHook(LowLevelKeyboardProc proc)
+    {
+        using var curProcess = System.Diagnostics.Process.GetCurrentProcess();
+        using var curModule = curProcess.MainModule!;
+        return SetWindowsHookEx(WH_KEYBOARD_LL, proc, GetModuleHandle(curModule.ModuleName), 0);
+    }
+
+    private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
+    {
+        if (nCode >= 0 && wParam == (IntPtr)WM_KEYDOWN)
+        {
+            int vkCode = Marshal.ReadInt32(lParam);
+            
+            // Detect Ctrl+C
+            if (vkCode == VK_C && (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0)
+            {
+                var now = DateTimeOffset.UtcNow;
+                
+                // Debounce check
+                if (now - _lastCtrlCTimestamp > TimeSpan.FromMilliseconds(CtrlCDebounceMs))
+                {
+                    _lastCtrlCTimestamp = now;
+                    EmitCtrlCEvent();
+                }
+            }
+        }
+        return CallNextHookEx(_hookId, nCode, wParam, lParam);
+    }
+
+    private void EmitCtrlCEvent()
+    {
+        var payload = new CtrlCPayload
+        {
+            Type = "ctrl-c",
+            Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+        };
+
+        var json = JsonSerializer.Serialize(payload, _jsonOptions);
+        Console.WriteLine(json);
+        Console.Out.Flush();
+        
+        Console.Error.WriteLine("[KEYBOARD] ✓ Ctrl+C detected");
+    }
+
+    private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    private static extern IntPtr GetModuleHandle(string lpModuleName);
+
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int vKey);
+}
+
+internal sealed class CtrlCPayload
+{
+    public string? Type { get; set; }
+    public long Timestamp { get; set; }
 }
 
 internal sealed class SelectionWatcher : IDisposable

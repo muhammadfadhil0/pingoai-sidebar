@@ -78,12 +78,16 @@ const DEFAULT_LANGUAGE_SETTINGS = {
 const CLIPBOARD_POLL_INTERVAL = 400;
 const MIN_CLIPBOARD_TEXT_LENGTH = 3;
 const AUTO_BUBBLE_DEBOUNCE_MS = 900;
+const DUPLICATE_TEXT_COOLDOWN_MS = 500; // Cooldown untuk mencegah double trigger
 
 let clipboardWatcherInterval = null;
 let lastClipboardText = '';
 let lastBubbleTimestamp = 0;
 const autoHideSuppressedTexts = new Set();
 let isProcessingAction = false;
+let clipboardCopyTriggered = false; // Flag ketika Ctrl+C terdeteksi
+let lastCopyTimestamp = 0; // Timestamp terakhir Ctrl+C ditekan
+let highlightWatcherProcess = null; // Process HighlightWatcher untuk keyboard hook
 
 
 // AI Service State
@@ -107,11 +111,39 @@ function suppressClipboardForAutoHide() {
 }
 
 // Server Configuration
-// PENTING: Ganti URL ini dengan URL hosting PHP Anda setelah upload
 const SERVER_URL = 'https://soulhbc.com/api_pingoai/api.php';
 
 // Removed local free-integration loading logic as it is now on the server
 
+// TAMBAHAN BARU: Request limit tracking functions
+function getRequestLimitData() {
+  const limitData = store.get('requestLimit', { count: 0, lastUpdate: '' });
+  const today = new Date().toDateString();
+
+  if (limitData.lastUpdate !== today) {
+    limitData.count = 0;
+    limitData.lastUpdate = today;
+    store.set('requestLimit', limitData);
+  }
+
+  return limitData;
+}
+
+function incrementRequestCount() {
+  const limitData = getRequestLimitData();
+  limitData.count = (limitData.count || 0) + 1;
+  store.set('requestLimit', limitData);
+  return limitData.count;
+}
+
+function getModelForRequest() {
+  const limitData = getRequestLimitData();
+  if ((limitData.count || 0) >= 100) {
+    return 'llama-3.1-8b-instant'; // Model fallback
+  }
+  return 'openai/gpt-oss-120b'; // Model premium
+}
+// AKHIR TAMBAHAN
 
 function trimHistory() {
   if (conversationHistory.length > MAX_HISTORY_LENGTH) {
@@ -668,14 +700,15 @@ function shouldSkipAutoBubble() {
   );
 }
 
-function maybeShowBubbleFromClipboard(text) {
+function maybeShowBubbleFromClipboard(text, forceShow = false) {
   // Don't show bubble if onboarding is not completed
   const onboardingCompleted = store.get('onboardingCompleted', false);
   if (!onboardingCompleted) {
     return;
   }
 
-  if (shouldSkipAutoBubble()) {
+  // Skip auto-bubble check unless forced
+  if (!forceShow && shouldSkipAutoBubble()) {
     return;
   }
 
@@ -685,7 +718,8 @@ function maybeShowBubbleFromClipboard(text) {
   }
 
   const now = Date.now();
-  if (now - lastBubbleTimestamp < AUTO_BUBBLE_DEBOUNCE_MS) {
+  // Skip debounce check if forced (untuk duplicate text)
+  if (!forceShow && now - lastBubbleTimestamp < AUTO_BUBBLE_DEBOUNCE_MS) {
     return;
   }
 
@@ -714,6 +748,26 @@ function startClipboardWatcher() {
   clipboardWatcherInterval = setInterval(() => {
     try {
       const currentText = clipboard.readText();
+      const serviceSettings = store.get('serviceSettings', { allowDuplicateText: false });
+      const allowDuplicate = serviceSettings.allowDuplicateText === true;
+      const now = Date.now();
+      
+      // Check jika ada Ctrl+C trigger untuk duplicate text
+      if (clipboardCopyTriggered && allowDuplicate) {
+        clipboardCopyTriggered = false; // Reset flag
+        
+        // Jika teks sama dan allowDuplicateText aktif, tetap tampilkan bubble
+        if (currentText === lastClipboardText && currentText && currentText.trim().length >= MIN_CLIPBOARD_TEXT_LENGTH) {
+          // Cek cooldown untuk mencegah spam
+          if (now - lastBubbleTimestamp > DUPLICATE_TEXT_COOLDOWN_MS) {
+            console.log('[Clipboard] Duplicate text detected, showing bubble (allowDuplicateText enabled)');
+            maybeShowBubbleFromClipboard(currentText);
+          }
+          return;
+        }
+      }
+      
+      // Logic normal: skip jika teks sama
       if (currentText === lastClipboardText) {
         return;
       }
@@ -741,6 +795,175 @@ function stopClipboardWatcher() {
   clearInterval(clipboardWatcherInterval);
   clipboardWatcherInterval = null;
 }
+
+// ========================================
+// HIGHLIGHT WATCHER INTEGRATION
+// Untuk mendeteksi Ctrl+C dan text selection di Windows
+// ========================================
+function getHighlightWatcherPath() {
+  const possiblePaths = [
+    path.join(__dirname, 'native', 'HighlightWatcher', 'bin', 'Publish', 'HighlightWatcher.exe'),
+    path.join(__dirname, 'native', 'HighlightWatcher', 'bin', 'Release', 'net8.0', 'HighlightWatcher.exe'),
+    path.join(__dirname, 'native', 'HighlightWatcher', 'bin', 'Release', 'net8.0', 'win-x64', 'HighlightWatcher.exe'),
+    path.join(__dirname, 'native', 'HighlightWatcher', 'bin', 'Release', 'net8.0', 'publish', 'HighlightWatcher.exe')
+  ];
+  
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      return p;
+    }
+  }
+  return null;
+}
+
+function startHighlightWatcher() {
+  // Only run on Windows
+  if (!isWindows) {
+    console.log('[HighlightWatcher] Skipped: Not Windows');
+    return false;
+  }
+  
+  // Check if onboarding is completed
+  const onboardingCompleted = store.get('onboardingCompleted', false);
+  if (!onboardingCompleted) {
+    console.log('[HighlightWatcher] Skipped: Onboarding not completed');
+    return false;
+  }
+  
+  // Check if AI service is enabled
+  if (!aiServiceEnabled) {
+    console.log('[HighlightWatcher] Skipped: AI Service is OFF');
+    return false;
+  }
+  
+  // Already running?
+  if (highlightWatcherProcess) {
+    console.log('[HighlightWatcher] Already running');
+    return true;
+  }
+  
+  const exePath = getHighlightWatcherPath();
+  if (!exePath) {
+    console.log('[HighlightWatcher] Executable not found. Run "npm run watcher:build" to build it.');
+    return false;
+  }
+  
+  console.log('[HighlightWatcher] Starting:', exePath);
+  
+  try {
+    highlightWatcherProcess = spawn(exePath, [], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true
+    });
+    
+    let buffer = '';
+    
+    highlightWatcherProcess.stdout.on('data', (data) => {
+      buffer += data.toString();
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || ''; // Keep incomplete line in buffer
+      
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        
+        try {
+          const payload = JSON.parse(line);
+          handleHighlightWatcherPayload(payload);
+        } catch (err) {
+          console.error('[HighlightWatcher] Parse error:', err.message);
+        }
+      }
+    });
+    
+    highlightWatcherProcess.stderr.on('data', (data) => {
+      const msg = data.toString().trim();
+      if (msg) {
+        console.log('[HighlightWatcher]', msg);
+      }
+    });
+    
+    highlightWatcherProcess.on('error', (err) => {
+      console.error('[HighlightWatcher] Process error:', err.message);
+      highlightWatcherProcess = null;
+    });
+    
+    highlightWatcherProcess.on('exit', (code, signal) => {
+      console.log(`[HighlightWatcher] Exited with code ${code}, signal ${signal}`);
+      highlightWatcherProcess = null;
+    });
+    
+    console.log('[HighlightWatcher] Started successfully');
+    return true;
+  } catch (err) {
+    console.error('[HighlightWatcher] Failed to start:', err.message);
+    highlightWatcherProcess = null;
+    return false;
+  }
+}
+
+function stopHighlightWatcher() {
+  if (!highlightWatcherProcess) {
+    return;
+  }
+  
+  console.log('[HighlightWatcher] Stopping...');
+  try {
+    highlightWatcherProcess.kill('SIGTERM');
+  } catch (err) {
+    console.error('[HighlightWatcher] Error stopping:', err.message);
+  }
+  highlightWatcherProcess = null;
+}
+
+function handleHighlightWatcherPayload(payload) {
+  if (!payload) return;
+  
+  // Handle Ctrl+C event
+  if (payload.type === 'ctrl-c') {
+    console.log('[HighlightWatcher] Ctrl+C detected');
+    
+    // Set flag untuk clipboard watcher
+    clipboardCopyTriggered = true;
+    lastCopyTimestamp = Date.now();
+    
+    // Jika allowDuplicateText aktif, paksa tampilkan bubble
+    const serviceSettings = store.get('serviceSettings', { allowDuplicateText: false });
+    if (serviceSettings.allowDuplicateText) {
+      // Delay sedikit untuk memastikan clipboard sudah diupdate
+      setTimeout(() => {
+        try {
+          const currentText = clipboard.readText();
+          if (currentText && currentText.trim().length >= MIN_CLIPBOARD_TEXT_LENGTH) {
+            // Cek cooldown
+            if (Date.now() - lastBubbleTimestamp > DUPLICATE_TEXT_COOLDOWN_MS) {
+              console.log('[HighlightWatcher] Showing bubble for duplicate text');
+              maybeShowBubbleFromClipboard(currentText, true); // true = force show
+            }
+          }
+        } catch (err) {
+          console.error('[HighlightWatcher] Error reading clipboard:', err);
+        }
+      }, 100);
+    }
+    return;
+  }
+  
+  // Handle text selection event (existing behavior)
+  if (payload.text) {
+    const selectionSettings = store.get('selectionSettings', { autoBubbleOnHighlight: false });
+    if (selectionSettings.autoBubbleOnHighlight) {
+      console.log('[HighlightWatcher] Text selection:', payload.text.substring(0, 50));
+      
+      const bounds = payload.bounds ? {
+        x: Math.round(payload.bounds.x),
+        y: Math.round(payload.bounds.y)
+      } : null;
+      
+      revealBubbleWithText(payload.text, bounds);
+    }
+  }
+}
+// ========================================
 
 function createTray() {
   try {
@@ -851,6 +1074,9 @@ app.whenReady().then(() => {
   registerSettingsShortcut(initialWindowSettings.settingsShortcut);
   registerBubbleShortcut(initialWindowSettings.bubbleShortcut);
   startClipboardWatcher();
+  
+  // Start HighlightWatcher for Ctrl+C detection and text selection (Windows only)
+  startHighlightWatcher();
 
   // Setup auto-start dari saved settings
   const serviceSettings = store.get('serviceSettings', { runInBackground: true, autoStart: false });
@@ -861,11 +1087,28 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   const serviceSettings = store.get('serviceSettings', { runInBackground: true });
-  if (serviceSettings.runInBackground) {
+  const aiModeSettings = store.get('aiModeSettings', { mode: 'glance' });
+  
+  console.log('🔍 window-all-closed - serviceSettings:', JSON.stringify(serviceSettings));
+  console.log('🔍 window-all-closed - aiModeSettings:', JSON.stringify(aiModeSettings));
+  
+  // Glance mode ALWAYS requires running in background
+  const isGlanceMode = aiModeSettings.mode === 'glance';
+  const shouldRunInBackground = serviceSettings.runInBackground || isGlanceMode;
+  
+  // Auto-fix: If Glance mode but runInBackground is false, fix the store
+  if (isGlanceMode && !serviceSettings.runInBackground) {
+    console.log('🔧 Auto-fixing: Setting runInBackground=true for Glance mode');
+    store.set('serviceSettings', { ...serviceSettings, runInBackground: true });
+  }
+  
+  if (shouldRunInBackground) {
+    console.log('✅ Keeping app running in tray (runInBackground:', serviceSettings.runInBackground, ', isGlanceMode:', isGlanceMode, ')');
     // Keep running in tray
     return;
   }
 
+  console.log('❌ Quitting app - runInBackground is false and not in Glance mode');
   app.isQuitting = true;
   app.quit();
 });
@@ -875,6 +1118,7 @@ app.on('before-quit', () => {
   console.log('App is quitting, cleaning up tray...');
   globalShortcut.unregisterAll();
   stopClipboardWatcher();
+  stopHighlightWatcher();
   if (tray) {
     tray.destroy();
     tray = null;
@@ -885,6 +1129,7 @@ app.on('will-quit', () => {
   // Additional cleanup if before-quit didn't fire
   globalShortcut.unregisterAll();
   stopClipboardWatcher();
+  stopHighlightWatcher();
   if (tray) {
     tray.destroy();
     tray = null;
@@ -983,6 +1228,15 @@ ipcMain.handle('save-settings', async (event, settings) => {
     };
     store.set('languageSettings', normalizedLanguage);
   }
+  if (settings.aiModeSettings && settings.aiModeSettings.mode) {
+    const normalizedMode = settings.aiModeSettings.mode === 'panel' ? 'panel' : 'glance';
+    store.set('aiModeSettings', { mode: normalizedMode });
+
+    // Force runInBackground untuk Glance Mode
+    if (normalizedMode === 'glance' && settings.serviceSettings) {
+      settings.serviceSettings.runInBackground = true;
+    }
+  }
   if (settings.serviceSettings) {
     store.set('serviceSettings', settings.serviceSettings);
 
@@ -990,10 +1244,6 @@ ipcMain.handle('save-settings', async (event, settings) => {
     if (typeof settings.serviceSettings.autoStart === 'boolean') {
       setupAutoStart(settings.serviceSettings.autoStart);
     }
-  }
-  if (settings.aiModeSettings && settings.aiModeSettings.mode) {
-    const normalizedMode = settings.aiModeSettings.mode === 'panel' ? 'panel' : 'glance';
-    store.set('aiModeSettings', { mode: normalizedMode });
   }
   if (settings.integration) {
     store.set('integration', settings.integration);
@@ -1016,6 +1266,14 @@ ipcMain.handle('apply-settings', async (event, settings) => {
       const normalizedMode = settings.aiModeSettings.mode === 'panel' ? 'panel' : 'glance';
       store.set('aiModeSettings', { mode: normalizedMode });
       appliedAIMode = normalizedMode;
+
+      // Force runInBackground untuk Glance Mode
+      if (normalizedMode === 'glance') {
+        if (!settings.serviceSettings) {
+          settings.serviceSettings = {};
+        }
+        settings.serviceSettings.runInBackground = true;
+      }
     }
 
     if (settings.windowSettings) {
@@ -1189,14 +1447,23 @@ ipcMain.handle('send-ai-message', async (event, { message, action, clearHistory,
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json'
     };
-    let requestData = {
-      model,
-      messages,
-      max_tokens: 1000
-    };
 
     // Check integration type
-    const integration = store.get('integration', { type: 'custom' });
+    const integration = store.get('integration', { type: 'custom' }); // PINDAH KE SINI
+
+    // TAMBAHAN BARU: Tentukan model berdasarkan limit untuk free integration
+    let modelToUse = model;
+    if (integration.type === 'free') {
+      incrementRequestCount(); // Track request
+      modelToUse = getModelForRequest(); // Dapatkan model (premium atau fallback)
+      console.log(`🔢 Request count incremented. Using model: ${modelToUse}`);
+    }
+    // AKHIR TAMBAHAN
+
+    let requestData = {
+      model: modelToUse, // UBAH DARI 'model' MENJADI 'modelToUse'
+      messages: conversationHistory
+    };
 
     // Jika menggunakan 'free' integration (PHP Proxy)
     if (integration.type === 'free') {
@@ -1324,15 +1591,15 @@ ipcMain.handle('send-text-action', async (event, { action, param }) => {
       // Store last action for retry
       lastAction = action;
       lastParam = param;
-      
+
       try {
         // Step 1: Check internet connectivity
         console.log('[Connectivity Check] Checking internet connection...');
         const connectivityResult = await checkInternetConnection();
-        
+
         if (!connectivityResult.success) {
           console.log('[Connectivity Check] Failed:', connectivityResult.timeout ? 'timeout' : 'no connection');
-          
+
           if (connectivityResult.timeout) {
             // Slow connection detected, notify frontend but continue
             if (glanceResponseWindow) {
@@ -1349,7 +1616,7 @@ ipcMain.handle('send-text-action', async (event, { action, param }) => {
         } else {
           console.log('[Connectivity Check] Connection OK');
         }
-        
+
         // Build the AI message
         const apiKey = store.get('apiKey');
         const apiUrl = store.get('apiUrl');
@@ -1403,16 +1670,26 @@ ipcMain.handle('send-text-action', async (event, { action, param }) => {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json'
         };
+
+        // Check integration type
+        const integration = store.get('integration', { type: 'custom' }); // PINDAHKAN KE SINI
+
+        // TAMBAHAN BARU: Tentukan model berdasarkan limit untuk free integration
+        let modelToUse = model;
+        if (integration.type === 'free') {
+          incrementRequestCount(); // Track request
+          modelToUse = getModelForRequest(); // Dapatkan model (premium atau fallback)
+          console.log(`🔢 Request count incremented. Using model: ${modelToUse}`);
+        }
+        // AKHIR TAMBAHAN
+
         let requestData = {
-          model,
+          model: modelToUse, // UBAH DARI 'model' MENJADI 'modelToUse'
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userMessage }
           ]
         };
-
-        // Check integration type
-        const integration = store.get('integration', { type: 'custom' });
 
         // Jika menggunakan 'free' integration (PHP Proxy)
         if (integration.type === 'free') {
@@ -1442,7 +1719,7 @@ ipcMain.handle('send-text-action', async (event, { action, param }) => {
         return { success: true, mode: 'glance' };
       } catch (error) {
         console.error('AI API Error:', error);
-        
+
         let errorMessage = error.response?.data?.error?.message || error.message || 'Failed to connect to AI service';
         let errorCode = 'ERR_UNKNOWN';
 
@@ -1455,7 +1732,7 @@ ipcMain.handle('send-text-action', async (event, { action, param }) => {
           errorCode = 'ERR_TIMEOUT';
           errorMessage = 'ERR_TIMEOUT';
         }
-        
+
         if (glanceResponseWindow) {
           glanceResponseWindow.webContents.send('glance-ai-response', {
             error: errorMessage,
@@ -1498,19 +1775,19 @@ ipcMain.handle('retry-glance-action', async () => {
     console.log('[IPC] retry-glance-action: No action or text to retry');
     return { success: false, error: 'No previous action to retry' };
   }
-  
+
   console.log('[IPC] Retrying last glance action:', lastAction);
-  
+
   // Re-trigger the connectivity check and AI processing
   // by simulating a send-text-action call
   try {
     // Check connectivity again
     console.log('[Connectivity Check] Checking internet connection...');
     const connectivityResult = await checkInternetConnection();
-    
+
     if (!connectivityResult.success) {
       console.log('[Connectivity Check] Failed:', connectivityResult.timeout ? 'timeout' : 'no connection');
-      
+
       if (connectivityResult.timeout) {
         // Slow connection detected, notify frontend but continue
         if (glanceResponseWindow) {
@@ -1527,7 +1804,7 @@ ipcMain.handle('retry-glance-action', async () => {
     } else {
       console.log('[Connectivity Check] Connection OK');
     }
-    
+
     // Proceed with AI request (copy-paste logic from send-text-action)
     const apiKey = store.get('apiKey');
     const apiUrl = store.get('apiUrl');
@@ -1620,7 +1897,7 @@ ipcMain.handle('retry-glance-action', async () => {
     return { success: true, mode: 'glance' };
   } catch (error) {
     console.error('AI API Error (Retry):', error);
-    
+
     let errorMessage = error.response?.data?.error?.message || error.message || 'Failed to connect to AI service';
     let errorCode = 'ERR_UNKNOWN';
 
@@ -1808,6 +2085,25 @@ ipcMain.handle('get-free-integration-defaults', async () => {
   };
 });
 
+// Request limit stats handler
+ipcMain.handle('get-request-stats', async () => {
+  const limitData = getRequestLimitData();
+  const used = limitData.count || 0;
+  const remaining = Math.max(0, 100 - used);
+  const isPremium = used < 100;
+  const currentModel = isPremium ? 'openai/gpt-oss-120b' : 'llama-3.1-8b-instant';
+  
+  return {
+    success: true,
+    used: used,
+    remaining: remaining,
+    total: 100,
+    isPremium: isPremium,
+    currentModel: currentModel,
+    lastUpdate: limitData.lastUpdate
+  };
+});
+
 // Onboarding IPC Handlers
 ipcMain.handle('complete-onboarding', async (event, config) => {
   try {
@@ -1856,10 +2152,16 @@ ipcMain.handle('complete-onboarding', async (event, config) => {
       store.set('aiModeSettings', { mode: config.aiMode });
     }
 
-    // Service settings (Default: run in background)
-    if (config.runInBackground !== undefined) {
-      const currentServiceSettings = store.get('serviceSettings', { runInBackground: true, autoStart: false });
+    // Service settings - TAMBAHAN: Selalu set default run in background
+    const currentServiceSettings = store.get('serviceSettings', { runInBackground: true, autoStart: false });
+    if (config.aiMode === 'glance') {
+      // Force runInBackground untuk Glance Mode
+      store.set('serviceSettings', { ...currentServiceSettings, runInBackground: true, autoStart: false });
+    } else if (config.runInBackground !== undefined) {
       store.set('serviceSettings', { ...currentServiceSettings, runInBackground: config.runInBackground });
+    } else {
+      // Set default jika tidak ada config
+      store.set('serviceSettings', { runInBackground: true, autoStart: false });
     }
 
     // Save all settings
@@ -1887,6 +2189,7 @@ ipcMain.handle('complete-onboarding', async (event, config) => {
     const initialWindowSettings = store.get('windowSettings', {});
     registerBubbleShortcut(initialWindowSettings.bubbleShortcut);
     startClipboardWatcher();
+    startHighlightWatcher();
     console.log('✅ Onboarding completed - Bubble AI features enabled');
 
     return { success: true };
