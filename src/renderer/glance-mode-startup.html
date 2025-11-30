@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>PingoAI - Startup</title>
+    <title>PingoAI - Welcome</title>
     <style>
       * {
         margin: 0;
@@ -195,7 +195,6 @@
         margin-bottom: 10px;
         color: hsl(var(--foreground));
         letter-spacing: -0.025em;
-        /* text-align: center; */
       }
 
       p {
@@ -203,7 +202,6 @@
         color: hsl(var(--muted-foreground));
         margin-bottom: 16px;
         line-height: 1.6;
-        /* text-align: center; */
       }
 
       .info-box {
@@ -320,7 +318,7 @@
         width: 20px;
         height: 20px;
         z-index: 20;
-        top: 42px; /* Approx position over Settings */
+        top: 42px;
         left: 60%;
         pointer-events: none;
         opacity: 0;
@@ -425,9 +423,9 @@
       <label class="checkbox-container" id="dontShowAgainContainer">
         <input type="checkbox" id="dontShowAgain" />
         <span
-          data-en="Don't show this on startup"
-          data-id="Jangan tampilkan ini saat startup"
-        >Jangan tampilkan ini saat startup</span>
+          data-en="Don't show this again on startup"
+          data-id="Jangan tampilkan ini lagi saat startup"
+        >Jangan tampilkan ini lagi saat startup</span>
       </label>
 
       <button
@@ -471,15 +469,15 @@
 
       // Close window
       closeBtn.addEventListener("click", () => {
-        window.electronAPI.closeGlanceHint();
+        window.electronAPI.closeStartupHint();
       });
 
       okBtn.addEventListener("click", async () => {
         // Save preference if checkbox is checked
         if (dontShowAgainCheckbox.checked) {
-          await window.electronAPI.saveGlanceHintPreference(false);
+          await window.electronAPI.saveStartupHintPreference(false);
         }
-        window.electronAPI.closeGlanceHint();
+        window.electronAPI.closeStartupHint();
       });
 
       // Listen for theme changes

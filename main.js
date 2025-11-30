@@ -51,6 +51,7 @@ let selectionBubbleWindow = null;
 let glanceResponseWindow = null;
 let onboardingWindow = null;
 let glanceModeHintWindow = null;
+let startupHintWindow = null;
 
 let tray = null;
 let selectedText = '';
@@ -599,6 +600,37 @@ function createGlanceModeHintWindow() {
   return glanceModeHintWindow;
 }
 
+// Create startup hint window (shown on app startup)
+function createStartupHintWindow() {
+  if (startupHintWindow) {
+    startupHintWindow.close();
+  }
+
+  startupHintWindow = new BrowserWindow({
+    width: 460,
+    height: 420,
+    frame: false,
+    resizable: false,
+    center: true,
+    alwaysOnTop: true,
+    autoHideMenuBar: true,
+    icon: path.join(__dirname, 'assets', '256_icon.png'),
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'src/preload/glance-mode-startup-preload.js')
+    }
+  });
+
+  startupHintWindow.loadFile('src/renderer/glance-mode-startup.html');
+
+  startupHintWindow.on('closed', () => {
+    startupHintWindow = null;
+  });
+
+  return startupHintWindow;
+}
+
 
 
 // Create selection bubble window (appears when text is selected)
@@ -1035,12 +1067,13 @@ function setupAutoStart(enabled) {
     const autoLauncher = new AutoLaunch({
       name: 'PingoAI',
       path: app.getPath('exe'),
-      isHidden: false
+      isHidden: true, // Launch hidden on startup
+      args: ['--hidden'] // Add --hidden flag to detect auto-start
     });
 
     if (enabled) {
       autoLauncher.enable()
-        .then(() => console.log('Auto-start enabled'))
+        .then(() => console.log('Auto-start enabled with --hidden flag'))
         .catch(err => console.error('Failed to enable auto-start:', err));
     } else {
       autoLauncher.disable()
@@ -1051,7 +1084,8 @@ function setupAutoStart(enabled) {
     // Untuk macOS/Linux, gunakan app.setLoginItemSettings
     app.setLoginItemSettings({
       openAtLogin: enabled,
-      openAsHidden: false,
+      openAsHidden: true, // Launch hidden on startup
+      args: ['--hidden'],
       name: 'PingoAI'
     });
   }
@@ -1061,25 +1095,60 @@ app.whenReady().then(() => {
   // Create system tray
   createTray();
 
-  // DEMO: Show update alert on startup
-
-
   const currentAIMode = getCurrentAIMode();
 
   // Check if onboarding has been completed
   const onboardingCompleted = store.get('onboardingCompleted', false);
 
+  // Get service settings
+  const serviceSettings = store.get('serviceSettings', { runInBackground: true, autoStart: false });
+
+  // Detect if this is an auto-start launch (Windows startup) or normal launch (user clicked icon)
+  // Auto-start launches typically have --hidden flag or we can check wasOpenedAsHidden
+  const isAutoStartLaunch = process.argv.includes('--hidden') || 
+                            process.argv.includes('--autostart') ||
+                            (isWindows && app.getLoginItemSettings().wasOpenedAsHidden);
+
+  console.log('🚀 App launch mode:', isAutoStartLaunch ? 'AUTO-START (Windows Startup)' : 'NORMAL (User clicked icon)');
+  console.log('🎯 Current AI Mode:', currentAIMode);
+
   if (!onboardingCompleted) {
     // Show onboarding window for first-time users
     createOnboardingWindow();
   } else {
-    // Create chat window or show glance hint for returning users
-    if (currentAIMode === 'panel') {
-      createChatWindow();
+    if (isAutoStartLaunch) {
+      // AUTO-START LAUNCH (from Windows Startup):
+      // Show glance-mode-startup.html for BOTH modes, panel chat hidden
+      const startupHintSettings = store.get('startupHintSettings', { showHint: true });
+      if (startupHintSettings.showHint) {
+        createStartupHintWindow();
+      }
+      
+      // For panel mode: create window but keep it hidden on startup
+      if (currentAIMode === 'panel') {
+        createChatWindow();
+        if (chatWindow) {
+          chatWindow.hide();
+        }
+      }
+      // For glance mode: no chat window needed, just startup hint is shown (if enabled)
     } else {
-      const glanceHintSettings = store.get('glanceModeHintSettings', { showHint: true });
-      if (glanceHintSettings.showHint) {
-        createGlanceModeHintWindow();
+      // NORMAL LAUNCH (user clicked icon in Start Menu):
+      // Panel mode → show chat.html
+      // Glance mode → show glance-mode-hint.html
+      if (currentAIMode === 'panel') {
+        createChatWindow();
+        // Show the chat window immediately
+        if (chatWindow) {
+          chatWindow.show();
+          chatWindow.focus();
+        }
+      } else {
+        // Glance mode: show hint window
+        const glanceHintSettings = store.get('glanceModeHintSettings', { showHint: true });
+        if (glanceHintSettings.showHint) {
+          createGlanceModeHintWindow();
+        }
       }
     }
   }
@@ -1094,7 +1163,6 @@ app.whenReady().then(() => {
   startHighlightWatcher();
 
   // Setup auto-start dari saved settings
-  const serviceSettings = store.get('serviceSettings', { runInBackground: true, autoStart: false });
   if (typeof serviceSettings.autoStart === 'boolean') {
     setupAutoStart(serviceSettings.autoStart);
   }
@@ -2310,6 +2378,26 @@ ipcMain.handle('save-glance-hint-preference', async (event, showHint) => {
     return { success: true };
   } catch (error) {
     console.error('Error saving glance hint preference:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Close startup hint window
+ipcMain.handle('close-startup-hint', async () => {
+  if (startupHintWindow) {
+    startupHintWindow.close();
+    return { success: true };
+  }
+  return { success: false };
+});
+
+// Save startup hint preference
+ipcMain.handle('save-startup-hint-preference', async (event, showHint) => {
+  try {
+    store.set('startupHintSettings.showHint', showHint);
+    return { success: true };
+  } catch (error) {
+    console.error('Error saving startup hint preference:', error);
     return { success: false, error: error.message };
   }
 });
