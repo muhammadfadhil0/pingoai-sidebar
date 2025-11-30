@@ -1,6 +1,11 @@
 # Ignore node modules
 node_modules/
 
+# ignore release files
+dist/*.exe
+dist/*.exe.blockmap
+release/
+
 # Ignore .NET build artifacts
 native/HighlightWatcher/bin/
 native/HighlightWatcher/obj/

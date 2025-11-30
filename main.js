@@ -67,9 +67,23 @@ const DEFAULT_SETTINGS_SHORTCUT = 'CommandOrControl+Shift+S';
 const DEFAULT_BUBBLE_SHORTCUT = 'CommandOrControl+Shift+X';
 
 // System prompts for different languages
-const SYSTEM_PROMPT_EN = `You are PingoAI. Answer only what the user requests concisely (maximum three sentences/100 words) and don't elaborate. Definitions should be just the core meaning, without lists of symptoms or additional facts unless requested. Always respond in English. For translation commands, reply only with the translated text.`;
+const SYSTEM_PROMPT_EN = `You are PingoAI, an AI assistant. Follow these HIGH PRIORITY RULES:
+1. Answer only what the user requests concisely (maximum 3 sentences/100 words unless more is needed)
+2. For EXPLAIN action: Explain the meaning/definition of the given word or sentence clearly
+3. For SUMMARIZE action: Create shorter version. If text is too short (less than 15 words), REJECT with "The text is too short, please select more text for me to summarize."
+4. For FORMALIZE action: Transform text into formal, professional language. Result MUST be formal
+5. For BULLET POINTS action: Create structured bullet points from the text. If text is too short (less than 15 words), REJECT with "The text is too short, please select more text for me to create bullet points."
+6. For TRANSLATE action: Reply ONLY with the translated text
+7. Always respond in English unless translating to another language`;
 
-const SYSTEM_PROMPT_ID = `You are PingoAI. Jawab hanya hal yang diminta pengguna secara singkat (maksimal tiga kalimat/100 kata) dan jangan melebar. Definisi cukup berupa pengertian inti, tanpa daftar gejala atau fakta tambahan kecuali diminta. Selalu gunakan Bahasa Indonesia kecuali saat pengguna memilih aksi terjemahan. Untuk perintah terjemahan, balas hanya dengan teks hasil terjemahan.`;
+const SYSTEM_PROMPT_ID = `Kamu adalah PingoAI, asisten AI. Ikuti ATURAN PRIORITAS TINGGI ini:
+1. Jawab hanya yang diminta secara singkat (maksimal 3 kalimat/100 kata kecuali perlu lebih)
+2. Untuk aksi JELASKAN: Jelaskan makna/arti kata atau kalimat yang diberikan dengan jelas
+3. Untuk aksi RINGKAS: Buat versi lebih pendek. Jika teks terlalu pendek (kurang dari 15 kata), TOLAK dengan "Kata-kata terlalu pendek, ambil lebih banyak kata untuk saya ringkas."
+4. Untuk aksi FORMAL: Ubah teks menjadi bahasa formal dan profesional. Hasil HARUS formal
+5. Untuk aksi BUAT POIN: Buat poin-poin terstruktur dari teks. Jika teks terlalu pendek (kurang dari 15 kata), TOLAK dengan "Kata-kata terlalu pendek, ambil lebih banyak kata untuk saya buat point."
+6. Untuk aksi TERJEMAH: Balas HANYA dengan teks hasil terjemahan
+7. Selalu gunakan Bahasa Indonesia kecuali menerjemahkan ke bahasa lain`;
 
 const DEFAULT_LANGUAGE_SETTINGS = {
   interfaceLanguage: 'en',
@@ -83,6 +97,7 @@ const DUPLICATE_TEXT_COOLDOWN_MS = 500; // Cooldown untuk mencegah double trigge
 let clipboardWatcherInterval = null;
 let lastClipboardText = '';
 let lastBubbleTimestamp = 0;
+let lastProcessedText = ''; // Track last processed text for duplicate detection
 const autoHideSuppressedTexts = new Set();
 let isProcessingAction = false;
 let clipboardCopyTriggered = false; // Flag ketika Ctrl+C terdeteksi
@@ -1430,6 +1445,146 @@ ipcMain.handle('send-ai-message', async (event, { message, action, clearHistory,
     conversationHistory = [];
   }
 
+  // Generate action-specific prompt with HIGH PRIORITY RULES (same as glance mode)
+  let processedMessage = userInput;
+  
+  if (action && action !== 'chat') {
+    const wordCount = userInput.trim().split(/\s+/).length;
+    const MIN_WORDS_FOR_SUMMARIZE = 15;
+    const MIN_WORDS_FOR_BULLET_POINTS = 15;
+
+    if (action === 'explain') {
+      processedMessage = aiLanguage === 'id'
+        ? `[ATURAN PRIORITAS TINGGI]
+Kamu adalah PingoAI. Tugasmu adalah MENJELASKAN kata atau kalimat yang diberikan.
+- Jelaskan makna/arti dari kata atau kalimat tersebut dengan bahasa yang jelas dan mudah dipahami
+- Fokus pada pengertian inti dan makna utama
+- Tambahkan konteks singkat jika diperlukan untuk pemahaman
+- Jangan mengubah fakta dari teks asli
+- Jawab dengan ringkas dan padat
+
+Teks yang perlu dijelaskan:
+${userInput}`
+        : `[HIGH PRIORITY RULES]
+You are PingoAI. Your task is to EXPLAIN the given word or sentence.
+- Explain the meaning of the word or sentence in clear and easy-to-understand language
+- Focus on the core definition and main meaning
+- Add brief context if needed for understanding
+- Do not change facts from the original text
+- Answer concisely and clearly
+
+Text to explain:
+${userInput}`;
+    } else if (action === 'summarize') {
+      if (wordCount < MIN_WORDS_FOR_SUMMARIZE) {
+        processedMessage = aiLanguage === 'id'
+          ? `[INSTRUKSI WAJIB - TIDAK BOLEH DIABAIKAN]
+Teks yang diberikan TERLALU PENDEK untuk diringkas (hanya ${wordCount} kata).
+Kamu WAJIB menolak dan membalas HANYA dengan teks berikut, tanpa tambahan apapun:
+"Kata-kata terlalu pendek, ambil lebih banyak kata untuk saya ringkas."
+
+Teks: ${userInput}`
+          : `[MANDATORY INSTRUCTION - CANNOT BE IGNORED]
+The given text is TOO SHORT to summarize (only ${wordCount} words).
+You MUST reject and reply ONLY with the following text, no additions:
+"The text is too short, please select more text for me to summarize."
+
+Text: ${userInput}`;
+      } else {
+        processedMessage = aiLanguage === 'id'
+          ? `[ATURAN PRIORITAS TINGGI]
+Kamu adalah PingoAI. Tugasmu adalah MERINGKAS teks panjang menjadi pendek dan mudah dimengerti.
+- Ringkas teks ini menjadi versi yang lebih pendek tanpa menghilangkan inti informasi
+- Gunakan bahasa yang mudah dipahami
+- Jangan tambahkan informasi baru, hanya rangkum yang ada
+- Hasil harus lebih pendek dari teks asli
+
+Teks yang perlu diringkas:
+${userInput}`
+          : `[HIGH PRIORITY RULES]
+You are PingoAI. Your task is to SUMMARIZE long text into a shorter, easy-to-understand version.
+- Summarize this text into a shorter version without losing core information
+- Use easy-to-understand language
+- Do not add new information, only summarize what exists
+- Result must be shorter than the original text
+
+Text to summarize:
+${userInput}`;
+      }
+    } else if (action === 'formalize') {
+      processedMessage = aiLanguage === 'id'
+        ? `[ATURAN PRIORITAS TINGGI]
+Kamu adalah PingoAI. Tugasmu adalah membuat teks menjadi FORMAL.
+- Ubah teks ini menjadi versi yang FORMAL dan profesional
+- Gunakan bahasa baku dan sopan
+- Perbaiki struktur kalimat agar lebih rapi
+- Pilih kata-kata yang lebih formal dan profesional
+- JANGAN ubah makna, hanya tingkatkan formalitas
+- Hasil HARUS terdengar formal dan profesional
+
+Teks yang perlu diformalkan:
+${userInput}`
+        : `[HIGH PRIORITY RULES]
+You are PingoAI. Your task is to make the text FORMAL.
+- Transform this text into a FORMAL and professional version
+- Use proper and polite language
+- Improve sentence structure to be more neat
+- Choose more formal and professional words
+- DO NOT change the meaning, only increase formality
+- Result MUST sound formal and professional
+
+Text to formalize:
+${userInput}`;
+    } else if (action === 'bullet-points') {
+      if (wordCount < MIN_WORDS_FOR_BULLET_POINTS) {
+        processedMessage = aiLanguage === 'id'
+          ? `[INSTRUKSI WAJIB - TIDAK BOLEH DIABAIKAN]
+Teks yang diberikan TERLALU PENDEK untuk dibuat poin (hanya ${wordCount} kata).
+Kamu WAJIB menolak dan membalas HANYA dengan teks berikut, tanpa tambahan apapun:
+"Kata-kata terlalu pendek, ambil lebih banyak kata untuk saya buat point."
+
+Teks: ${userInput}`
+          : `[MANDATORY INSTRUCTION - CANNOT BE IGNORED]
+The given text is TOO SHORT to create bullet points (only ${wordCount} words).
+You MUST reject and reply ONLY with the following text, no additions:
+"The text is too short, please select more text for me to create bullet points."
+
+Text: ${userInput}`;
+      } else {
+        processedMessage = aiLanguage === 'id'
+          ? `[ATURAN PRIORITAS TINGGI]
+Kamu adalah PingoAI. Tugasmu adalah membuat POIN-POIN dari teks.
+- Ubah teks ini menjadi daftar poin yang terstruktur
+- Langsung output poin per poin dari inti teks
+- Pisahkan tiap ide utama menjadi bullet terpisah
+- Gunakan bahasa yang padat dan ringkas
+- Fokus pada informasi penting saja
+
+Teks yang perlu dibuat poin:
+${userInput}`
+          : `[HIGH PRIORITY RULES]
+You are PingoAI. Your task is to create BULLET POINTS from the text.
+- Convert this text into a structured list of points
+- Directly output point by point of the text's essence
+- Separate each main idea into separate bullets
+- Use concise and compact language
+- Focus on important information only
+
+Text to convert to bullet points:
+${userInput}`;
+      }
+    } else if (action === 'translate') {
+      processedMessage = aiLanguage === 'id'
+        ? `Terjemahkan ke ${param || 'English'}: ${userInput}`
+        : `Translate to ${param || 'English'}: ${userInput}`;
+    } else if (action === 'custom') {
+      processedMessage = `${param}: ${userInput}`;
+    }
+  }
+
+  // Add processed message to history
+  conversationHistory.push({ role: 'user', content: processedMessage });
+
   try {
     const axios = require('axios');
     const aiLanguage = languageSettings.aiLanguage || 'en';
@@ -1438,8 +1593,7 @@ ipcMain.handle('send-ai-message', async (event, { message, action, clearHistory,
     // Build messages array with system prompt and history
     const messages = [
       { role: 'system', content: systemPrompt },
-      ...conversationHistory, // Include conversation history
-      { role: 'user', content: userInput }
+      ...conversationHistory // History now includes the new user message
     ];
 
     let requestUrl = apiUrl;
@@ -1461,8 +1615,8 @@ ipcMain.handle('send-ai-message', async (event, { message, action, clearHistory,
     // AKHIR TAMBAHAN
 
     let requestData = {
-      model: modelToUse, // UBAH DARI 'model' MENJADI 'modelToUse'
-      messages: conversationHistory
+      model: modelToUse,
+      messages: messages  // FIX: Gunakan 'messages' yang sudah di-build, bukan 'conversationHistory'
     };
 
     // Jika menggunakan 'free' integration (PHP Proxy)
@@ -1638,25 +1792,140 @@ ipcMain.handle('send-text-action', async (event, { action, param }) => {
         const axios = require('axios');
         const systemPrompt = aiLanguage === 'id' ? SYSTEM_PROMPT_ID : SYSTEM_PROMPT_EN;
 
-        // Generate action-specific prompt
+        // Generate action-specific prompt with HIGH PRIORITY RULES
         let userMessage = selectedText;
 
+        // Check text length for actions that require longer text
+        const wordCount = selectedText.trim().split(/\s+/).length;
+        const MIN_WORDS_FOR_SUMMARIZE = 15;
+        const MIN_WORDS_FOR_BULLET_POINTS = 15;
+
         if (action === 'explain') {
+          // EXPLAIN: Menjelaskan kata atau kalimat yang diberikan
           userMessage = aiLanguage === 'id'
-            ? `Jelaskan isi teks ini dengan bahasa yang ringkas, jelas, dan mudah dipahami. Fokus ke makna utama, tambahkan konteks jika perlu, dan hindari mengubah fakta dari teks asli.\n\n${selectedText}`
-            : `Explain the content of this text in concise, clear, and easy-to-understand language. Focus on the main meaning, add context if necessary, and avoid changing facts from the original text.\n\n${selectedText}`;
+            ? `[ATURAN PRIORITAS TINGGI]
+Kamu adalah PingoAI. Tugasmu adalah MENJELASKAN kata atau kalimat yang diberikan.
+- Jelaskan makna/arti dari kata atau kalimat tersebut dengan bahasa yang jelas dan mudah dipahami
+- Fokus pada pengertian inti dan makna utama
+- Tambahkan konteks singkat jika diperlukan untuk pemahaman
+- Jangan mengubah fakta dari teks asli
+- Jawab dengan ringkas dan padat
+
+Teks yang perlu dijelaskan:
+${selectedText}`
+            : `[HIGH PRIORITY RULES]
+You are PingoAI. Your task is to EXPLAIN the given word or sentence.
+- Explain the meaning of the word or sentence in clear and easy-to-understand language
+- Focus on the core definition and main meaning
+- Add brief context if needed for understanding
+- Do not change facts from the original text
+- Answer concisely and clearly
+
+Text to explain:
+${selectedText}`;
         } else if (action === 'summarize') {
-          userMessage = aiLanguage === 'id'
-            ? `Ringkas teks ini menjadi poin-poin pentingnya tanpa menghilangkan inti informasi. Jangan tambahin info baru, cukup rangkum yang ada.\n\n${selectedText}`
-            : `Summarize this text into key points without losing the core information. Do not add new info, just summarize what is there.\n\n${selectedText}`;
+          // SUMMARIZE: Meringkas teks panjang menjadi pendek dan mudah dimengerti
+          // WAJIB TOLAK jika teks terlalu pendek
+          if (wordCount < MIN_WORDS_FOR_SUMMARIZE) {
+            userMessage = aiLanguage === 'id'
+              ? `[INSTRUKSI WAJIB - TIDAK BOLEH DIABAIKAN]
+Teks yang diberikan TERLALU PENDEK untuk diringkas (hanya ${wordCount} kata).
+Kamu WAJIB menolak dan membalas HANYA dengan teks berikut, tanpa tambahan apapun:
+"Kata-kata terlalu pendek, ambil lebih banyak kata untuk saya ringkas."
+
+Teks: ${selectedText}`
+              : `[MANDATORY INSTRUCTION - CANNOT BE IGNORED]
+The given text is TOO SHORT to summarize (only ${wordCount} words).
+You MUST reject and reply ONLY with the following text, no additions:
+"The text is too short, please select more text for me to summarize."
+
+Text: ${selectedText}`;
+          } else {
+            userMessage = aiLanguage === 'id'
+              ? `[ATURAN PRIORITAS TINGGI]
+Kamu adalah PingoAI. Tugasmu adalah MERINGKAS teks panjang menjadi pendek dan mudah dimengerti.
+- Ringkas teks ini menjadi versi yang lebih pendek tanpa menghilangkan inti informasi
+- Gunakan bahasa yang mudah dipahami
+- Jangan tambahkan informasi baru, hanya rangkum yang ada
+- Hasil harus lebih pendek dari teks asli
+
+Teks yang perlu diringkas:
+${selectedText}`
+              : `[HIGH PRIORITY RULES]
+You are PingoAI. Your task is to SUMMARIZE long text into a shorter, easy-to-understand version.
+- Summarize this text into a shorter version without losing core information
+- Use easy-to-understand language
+- Do not add new information, only summarize what exists
+- Result must be shorter than the original text
+
+Text to summarize:
+${selectedText}`;
+          }
         } else if (action === 'formalize') {
+          // FORMALIZE: Membuat formal kata-kata atau kalimat apapun, HARUS formal
           userMessage = aiLanguage === 'id'
-            ? `Ubah teks ini menjadi versi yang lebih formal, rapi, dan sesuai bahasa profesional. Jangan ubah makna, hanya tingkatkan struktur dan pilihan katanya.\n\n${selectedText}`
-            : `Transform this text into a more formal, neat, and professional version. Do not change the meaning, only improve the structure and word choice.\n\n${selectedText}`;
+            ? `[ATURAN PRIORITAS TINGGI]
+Kamu adalah PingoAI. Tugasmu adalah membuat teks menjadi FORMAL.
+- Ubah teks ini menjadi versi yang FORMAL dan profesional
+- Gunakan bahasa baku dan sopan
+- Perbaiki struktur kalimat agar lebih rapi
+- Pilih kata-kata yang lebih formal dan profesional
+- JANGAN ubah makna, hanya tingkatkan formalitas
+- Hasil HARUS terdengar formal dan profesional
+
+Teks yang perlu diformalkan:
+${selectedText}`
+            : `[HIGH PRIORITY RULES]
+You are PingoAI. Your task is to make the text FORMAL.
+- Transform this text into a FORMAL and professional version
+- Use proper and polite language
+- Improve sentence structure to be more neat
+- Choose more formal and professional words
+- DO NOT change the meaning, only increase formality
+- Result MUST sound formal and professional
+
+Text to formalize:
+${selectedText}`;
         } else if (action === 'bullet-points') {
-          userMessage = aiLanguage === 'id'
-            ? `Ubah teks ini menjadi daftar poin yang terstruktur. Pisahkan tiap ide utama, pakai bullet dan bahasa yang padat.\n\n${selectedText}`
-            : `Convert this text into a structured list of points. Separate each main idea, use bullets and concise language.\n\n${selectedText}`;
+          // BULLET POINTS: Output langsung poin per poin inti dari teks
+          // WAJIB TOLAK jika teks terlalu pendek
+          if (wordCount < MIN_WORDS_FOR_BULLET_POINTS) {
+            userMessage = aiLanguage === 'id'
+              ? `[INSTRUKSI WAJIB - TIDAK BOLEH DIABAIKAN]
+Teks yang diberikan TERLALU PENDEK untuk dibuat poin (hanya ${wordCount} kata).
+Kamu WAJIB menolak dan membalas HANYA dengan teks berikut, tanpa tambahan apapun:
+"Kata-kata terlalu pendek, ambil lebih banyak kata untuk saya buat point."
+
+Teks: ${selectedText}`
+              : `[MANDATORY INSTRUCTION - CANNOT BE IGNORED]
+The given text is TOO SHORT to create bullet points (only ${wordCount} words).
+You MUST reject and reply ONLY with the following text, no additions:
+"The text is too short, please select more text for me to create bullet points."
+
+Text: ${selectedText}`;
+          } else {
+            userMessage = aiLanguage === 'id'
+              ? `[ATURAN PRIORITAS TINGGI]
+Kamu adalah PingoAI. Tugasmu adalah membuat POIN-POIN dari teks.
+- Ubah teks ini menjadi daftar poin yang terstruktur
+- Langsung output poin per poin dari inti teks
+- Pisahkan tiap ide utama menjadi bullet terpisah
+- Gunakan bahasa yang padat dan ringkas
+- Fokus pada informasi penting saja
+
+Teks yang perlu dibuat poin:
+${selectedText}`
+              : `[HIGH PRIORITY RULES]
+You are PingoAI. Your task is to create BULLET POINTS from the text.
+- Convert this text into a structured list of points
+- Directly output point by point of the text's essence
+- Separate each main idea into separate bullets
+- Use concise and compact language
+- Focus on important information only
+
+Text to convert to bullet points:
+${selectedText}`;
+          }
         } else if (action === 'translate') {
           userMessage = aiLanguage === 'id'
             ? `Terjemahkan ke ${param || 'English'}: ${selectedText}`

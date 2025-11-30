@@ -1,7 +1,7 @@
 {
   "name": "pingoai",
   "version": "1.0.0",
-  "description": "AI Integration for Dekstop",
+  "description": "AI Integration for Desktop",
   "main": "loader.js",
   "scripts": {
     "start": "electron .",

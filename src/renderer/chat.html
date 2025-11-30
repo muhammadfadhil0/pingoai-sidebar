@@ -907,19 +907,57 @@
       }
     }
 
-    function addMessage(text, type) {
+    function addMessage(text, type, animate = true) {
       const messageDiv = document.createElement('div');
       messageDiv.className = `message ${type}`;
       
       // Parse markdown for AI messages
       if (type === 'ai') {
-        messageDiv.innerHTML = marked.parse(text);
+        if (animate) {
+          // Use typing animation for AI messages
+          chatContainer.insertBefore(messageDiv, typingIndicator);
+          animateTyping(messageDiv, text);
+        } else {
+          messageDiv.innerHTML = marked.parse(text);
+          chatContainer.insertBefore(messageDiv, typingIndicator);
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
       } else {
         messageDiv.textContent = text;
+        chatContainer.insertBefore(messageDiv, typingIndicator);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
       }
-      
-      chatContainer.insertBefore(messageDiv, typingIndicator);
-      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function animateTyping(element, text) {
+      // Parse markdown first
+      const fullHTML = marked.parse(text);
+      let currentIndex = 0;
+      const typingSpeed = 15; // ms per character - fast typing effect
+      const chunkSize = 3; // Type 3 characters at a time for smoother performance
+
+      function typeNextChunk() {
+        if (currentIndex < fullHTML.length) {
+          const nextIndex = Math.min(currentIndex + chunkSize, fullHTML.length);
+          const chunk = fullHTML.substring(0, nextIndex);
+
+          // Update content
+          element.innerHTML = chunk;
+          currentIndex = nextIndex;
+
+          // Auto scroll to bottom
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+
+          // Continue typing
+          setTimeout(typeNextChunk, typingSpeed);
+        } else {
+          // Typing complete - final scroll
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+      }
+
+      // Start typing animation
+      typeNextChunk();
     }
 
     function addMessageWithHTML(html, type) {
