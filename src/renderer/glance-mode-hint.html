@@ -422,14 +422,6 @@
         PingoAI berjalan di system tray Anda. Klik kanan ikon PingoAI untuk membuka pengaturan atau panel chat.
       </p>
 
-      <label class="checkbox-container" id="dontShowAgainContainer">
-        <input type="checkbox" id="dontShowAgain" />
-        <span
-          data-en="Don't show this on startup"
-          data-id="Jangan tampilkan ini saat startup"
-        >Jangan tampilkan ini saat startup</span>
-      </label>
-
       <button
         class="btn btn-primary"
         id="okBtn"
@@ -443,7 +435,6 @@
     <script>
       const closeBtn = document.getElementById("closeBtn");
       const okBtn = document.getElementById("okBtn");
-      const dontShowAgainCheckbox = document.getElementById("dontShowAgain");
 
       // Load theme and language settings
       async function loadSettings() {
@@ -474,11 +465,7 @@
         window.electronAPI.closeGlanceHint();
       });
 
-      okBtn.addEventListener("click", async () => {
-        // Save preference if checkbox is checked
-        if (dontShowAgainCheckbox.checked) {
-          await window.electronAPI.saveGlanceHintPreference(false);
-        }
+      okBtn.addEventListener("click", () => {
         window.electronAPI.closeGlanceHint();
       });
 

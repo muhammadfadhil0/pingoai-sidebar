@@ -32,15 +32,31 @@ if (!gotTheLock) {
   console.log('Another instance is already running. Exiting...');
   app.quit();
 } else {
-  // Jika ada yang coba buka instance kedua, fokuskan window yang sudah ada
+  // Jika ada yang coba buka instance kedua (user klik icon lagi), fokuskan window yang sesuai dengan mode
   app.on('second-instance', (event, commandLine, workingDirectory) => {
-    console.log('Second instance detected, focusing existing window...');
-    if (chatWindow) {
-      if (chatWindow.isMinimized()) chatWindow.restore();
-      chatWindow.show();
-      chatWindow.focus();
+    console.log('Second instance detected, showing appropriate window based on AI mode...');
+    
+    const currentMode = getCurrentAIMode();
+    console.log('Current AI Mode:', currentMode);
+    
+    if (currentMode === 'panel') {
+      // Panel mode: show chat window
+      if (chatWindow) {
+        if (chatWindow.isMinimized()) chatWindow.restore();
+        chatWindow.show();
+        chatWindow.focus();
+      } else {
+        createChatWindow();
+      }
     } else {
-      createChatWindow();
+      // Glance mode: show glance-mode-hint.html
+      const glanceHintSettings = store.get('glanceModeHintSettings', { showHint: true });
+      if (glanceHintSettings.showHint) {
+        createGlanceModeHintWindow();
+      } else {
+        // If hint is disabled, just show settings
+        showOrCreateSettingsWindow();
+      }
     }
   });
 }
